@@ -109,6 +109,7 @@ component accessors="true" {
 			{
 
 				var methodReturnType = variables.methodSignatures[arguments.missingMethodName].returnType
+				
 				if(isType(local.methodReturnType,result) IS false)
 				{
 					throw(type="Invalid Type",message="Return type was of the wrong type when calling #missingMethodName#() on #variables.meta.name#, it must be of type: #methodReturnType#");
@@ -251,7 +252,7 @@ component accessors="true" {
 
 				for(var prop in variables.meta.properties)
 				{
-					if(structKeyExists(prop,"getter") AND prop.getter IS false){
+					if(NOT (structKeyExists(prop,"getter") AND prop.getter IS false)){
 						if(structKeyExists(variables.methodSignatures,"get#prop.name#"))
 						{
 							variables.methodSignatures["get#prop.name#"].returnType = "any";

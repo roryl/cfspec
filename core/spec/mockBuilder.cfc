@@ -8,7 +8,7 @@
 
 component {
 
-	public function init(required parent, required specPath, required functionName, required contextName,skipMocks=false){
+	public function init(required parent, required specPath, required functionName, required contextName,skipMocks=false,recurseCount=1){
 		this.log("mocking #arguments.specPath#");
 		/*
 		TASKS -
@@ -24,7 +24,7 @@ component {
 		var spec = "";
 		//Include the spec document. We need a direct reference to it so that any closures can be called
 		include template="#arguments.specPath#";
-
+		request.recurseCount = arguments.recurseCount;
 
 		/* The skipMocks flag is provided for when we are already passing in reference to a component under test. This will occur
 		when the specification describes overriding a function of the component under test. In that situation, the CUT is passed back in
@@ -56,6 +56,7 @@ component {
 				parent.MockOverride("#mock#");
 			}
 		}
+		
 		
 		
 		context = spec.tests[arguments.functionName]["#arguments.contextName#"];
@@ -100,9 +101,11 @@ component {
 		{
 
 			parent.mockFunction = function(mockObject,specPath,mockFunction,mockValuePath){
-				
+				//writeDump(arguments);
+
 				var spec="";
 				include template="#arguments.specPath#";
+
 				var value = evaluate("spec.#arguments.mockValuePath#")
 				
 				//Set the mock return value
@@ -158,6 +161,16 @@ component {
 						var spec = "";
 						include template="#specPath#";
 
+						if(structKeyExists(url,"depth") AND url.depth IS NOT 0 AND request.recurseCount GTE url.depth)
+						{
+							if(structKeyExists(spec.tests[arguments.mockFunctionName][arguments.mockContextName].then,"returns"))
+							{
+								var mockValuePath = 'tests.#arguments.mockFunctionName#["#arguments.mockContextName#"].then.returns';
+								this.mockFunction("#mockObjectName#",specPath,"#mockFunctionName#",mockValuePath) ;; //Return it as a string
+							}
+							return; 
+						}
+
 						//Call the factory method from the spec to build the object
 						if(structKeyExists(spec,"factory"))
 						{
@@ -188,7 +201,7 @@ component {
 						
 
 						//Create the final subItem by mocking itself. We do this by recursively calling the mockBuilder with each spec
-						finalsubObject = new cfspec.core.spec.mockBuilder(subObject,specPath,arguments.mockFunctionName,arguments.mockContextName);
+						finalsubObject = new cfspec.core.spec.mockBuilder(subObject,specPath,arguments.mockFunctionName,arguments.mockContextName,false,request.recurseCount + 1);
 						
 
 						//Create a getType utility object on the mock as this will be used when assessing the returnType
@@ -212,7 +225,7 @@ component {
 						//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
 						finalSubObject["#mockFunctionName#"] = function(){
 
-
+							request.given = arguments;
 							if(structKeyExists(this,"#variables.specContext.functionName#"))
 							{
 								result = evaluate("this._#variables.specContext.functionName#(argumentCollection=arguments)");
@@ -255,6 +268,30 @@ component {
 										throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
 									}
 																	
+								}
+								if(structKeyExists(variables.specContext.context.then,"assert"))
+								{
+
+									var assert = variables.specContext.context.then.assert;
+									
+									for(var i=1; i LTE arrayLen(assert); i =i+1)
+									{
+
+										if(isClosure(assert[i].value))
+										{
+											
+											var assertValue = assert[i].value();
+											if(isSimpleValue(assertValue) and assertValue IS false)
+											{
+												local.message = "";
+												if(structKeyExists(assert[i],"message"))
+												{
+													local.message = assert[i].message;
+												}
+												throw(message="The collaborator assertion from #variables.spec.class# failed. The message was:#local.message#");
+											}
+										}
+									}
 								}
 							}
 							if(isDefined("result"))
