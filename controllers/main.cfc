@@ -1,16 +1,31 @@
-<cfcomponent output="false" hint="Example FW/1 controller.">
+component output="false" hint="Example FW/1 controller."{
+
+
 	
-	<cffunction name="init" output="false" hint="Constructor, passed in the FW/1 instance.">
-		<cfargument name="fw" />
-		<cfset variables.fw = arguments.fw />
-		<cfreturn this />
-	</cffunction>
+	public function init(fw)
+		output="false" hint="Constructor, passed in the FW/1 instance."
+	{
+		variables.fw = arguments.fw;
+		return this;
+	}
+		
+	public function default(rc){
+		param name="rc.specPath" default="";
+		param name="rc.compilePath" default="";
+
+		if(rc.specPath IS NOT ""){
+			if(NOT directoryExists(rc.specPath))
+			{
+				throw('the spec path directory specified #rc.specPAth# does not exist');
+			}
+		}
+		if(rc.compilePath IS NOT ""){
+			if(NOT directoryExists(rc.compilePath))
+			{
+				throw('the compile path directory specified #rc.compilePath# does not exist');
+			}
+		}
+	}
 	
-	<cffunction name="default" output="false" hint="Default action.">
-		<cfargument name="rc" />
-		<cfset rc.when = now() />	<!--- set when for service argument --->
-		<!--- queue up a specific service (formatter.longdate) with named result (today)  --->
-		<cfset variables.fw.service( 'formatter.longdate', 'today' ) />
-	</cffunction>
 	
-</cfcomponent>
+}

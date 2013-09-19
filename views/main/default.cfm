@@ -1,4 +1,8 @@
-<cfset rc.title = "Default View" />	<!--- set a variable to be used in a layout --->
-<p>This is the default view for FW/1.</p>
-<!--- use the named result from the service call --->
-<p>This page was rendered on <cfoutput>#rc.today#</cfoutput>.</p>
+<cfoutput>
+
+<form>
+	Spec File Paths: <input name="specPath" id="specPath" value="#rc.specPath#"><br />
+	Output Compile Path: <input name="compilePath" id="compilePath" value="#rc.compilePath#"><br />
+	<input type="submit" name="submit" value="Compile!">
+</form>
+</cfoutput>

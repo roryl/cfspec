@@ -1,7 +1,7 @@
 <html>
 	<head>
 		<!--- title set by a view - there is no default --->
-		<title>FW/1 Skeleton - <cfoutput>#rc.title#</cfoutput></title>
+		<title>FW/1 Skeleton - </title>
 	</head>
 	<body>
 		<h1>FW/1 Default Layout</h1>

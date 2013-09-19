@@ -1,6 +1,9 @@
-<cfcomponent extends="/framework" output="false">
+component extends="/framework" output="false"
+{
+	this.name="cfspec";
 	
-	<!--- framework defaults (as struct literal):
+	this.mappings["/cfspec"] = getDirectoryFromPath(getBaseTemplatePath());
+	/*framework defaults (as struct literal):
 	variables.framework = {
 		// the name of the URL variable:
 		action = 'action',
@@ -54,11 +57,23 @@
 		// change this if you need multiple FW/1 applications in a single CFML application:
 		applicationKey = 'org.corfield.framework'
 	};
-	--->
+	*/
+
+	variables.framework = {
+		reloadApplicationOnEveryRequest = true
+	}
+
 	
-	<cffunction name="setupRequest">
-		<!--- use setupRequest to do initialization per request --->
-		<cfset request.context.startTime = getTickCount() />
-	</cffunction>
+	function setupRequest()
+	{
+		request.context.startTime = getTickCount();
+	}
+
+	public function onError(e)
+	{
+		writeDump(e);
+		abort;
+	}
+		
 	
-</cfcomponent>
+}
