@@ -103,11 +103,11 @@ component {
 					parent.mockFunction("#mockObject#",arguments.specPath,"#mockFunction#",mockValuePath) ;; //Return it as a string
 				}
 
-				else if(isStruct(mockedFunctions[mockFunc]) AND structKeyExists(mockedFunctions[mockFunc],"impersonateTest")) 
+				else if(isStruct(mockedFunctions[mockFunc]) AND structKeyExists(mockedFunctions[mockFunc],"mimic")) 
 				{
-					mockContextName = mockedFunctions[mockFunc].impersonateTest;
+					mockContextName = mockedFunctions[mockFunc].mimic;
 					//We need a real mock for this function that uses the real function call and real object
-						parent.impersonateTest = function(required mockObjectName,mockfunctionName,mockContextName){
+						parent.mimic = function(required mockObjectName,mockfunctionName,mockContextName){
 							
 							//Get the specification of the real object so that we can determine what needs to be mocked
 							realMockPath = variables[arguments.mockObjectName].getRealComponentPath();
@@ -126,18 +126,64 @@ component {
 							subObject.setSpec = function(spec){
 								variables.spec = arguments.spec;
 							}
-							
 							subObject.setSpec(spec);
 
-							//Get the specification of the test that we are impersonating, which will tell us what methods need to be mocked
-							
-							finalsubObject = new cfspec.core.spec.mockBuilder(subObject,specPath,arguments.mockFunctionName,arguments.mockContextName)
+							//Set the spec into the object as we need to pass in these values so that we can use them when proxying to the real function call
+							subObject.setSpecContext = function(spec,mockFunctionName,mockContextName){
+								variables.specContext = {
+									functionName:arguments.mockFunctionName,
+									contextName:arguments.mockContextName,
+									context:spec.tests[mockfunctionName]["#mockContextName#"]
+								}
+							}
+							subObject.setSpecContext(spec,arguments.mockFunctionName,arguments.mockContextName);
+
+							//Create the final subItem by mocking itself. We do this by recursively calling the mockBuilder with each spec
+							finalsubObject = new cfspec.core.spec.mockBuilder(subObject,specPath,arguments.mockFunctionName,arguments.mockContextName);
+
+							//Create a getType utility object on the mock as this will be used when assessing the returnType
+							finalSubObject.getType = createObject("component","cfspec.core.spec.getType");
+
+							//In order to create a proxy to the real method call, we need to first copy the real method to a proxy method
+							finalSubObject["_#mockFunctionName#"] = finalSubObject[mockFunctionName];
+
+							//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
+							finalSubObject["#mockFunctionName#"] = function(){
+								
+								result = evaluate("this._#variables.specContext.functionName#(argumentCollection=arguments)");
+
+								if(structKeyExists(variables.specContext.context,"then"))
+								{	
+									if(structKeyExists(variables.specContext.context.then,"returns"))
+									{
+										resultType = this.getType.init(result);
+										
+										returnType = variables.specContext.context.then.returns;
+										if(returnType CONTAINS "is")
+										{
+											returnType = replaceNoCase(returnType,"is","");
+										}
+										else if(isBoolean(returnType))
+										{
+											resultType = result;
+										}
+
+										if(resultType IS NOT returnType)
+										{
+											throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
+										}
+									}
+								}
+								
+								return result;
+							};	
+
 
 							variables[arguments.mockObjectName] = finalSubObject;
 
 
 						};
-					parent.impersonateTest(mockObject,mockFunction,mockContextName);
+					parent.mimic(mockObject,mockFunction,mockContextName);
 				}
 				else
 				{	
