@@ -13,17 +13,22 @@ component output="false" hint="Example FW/1 controller."{
 		param name="rc.specPath" default="";
 		param name="rc.compilePath" default="";
 
-		if(rc.specPath IS NOT ""){
-			if(NOT directoryExists(rc.specPath))
-			{
-				throw('the spec path directory specified #rc.specPAth# does not exist');
+		if(structKeyExists(rc,"submit"))
+		{
+			if(rc.specPath IS NOT ""){
+				if(NOT directoryExists(rc.specPath))
+				{
+					throw('the spec path directory specified #rc.specPAth# does not exist');
+				}
 			}
-		}
-		if(rc.compilePath IS NOT ""){
-			if(NOT directoryExists(rc.compilePath))
-			{
-				throw('the compile path directory specified #rc.compilePath# does not exist');
+			if(rc.compilePath IS NOT ""){
+				if(NOT directoryExists(rc.compilePath))
+				{
+					throw('the compile path directory specified #rc.compilePath# does not exist');
+				}
 			}
+
+			
 		}
 	}
 	
