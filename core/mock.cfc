@@ -37,12 +37,6 @@ component accessors="true" {
 		variables.realComponentPath=variables.meta.fullName;
 		buildMethodSignatures();
 
-		if(structKeyExists(methodSignatures,"getMockSpec"))
-		{
-			variables.mockSpec = variables.component.getMockSpec();
-			//setupDependencies();
-		}
-
 		return this;
 	}
 
@@ -73,7 +67,7 @@ component accessors="true" {
 			{
 				if(NOT structKeyExists(missingMethodArguments,key))
 				{
-					throw(type="Missing Argument",message="Argument #methodArguments[i].name# was required when calling #missingMethodName#() on #variables.meta.name# but was not passed in");
+					throw(type="Missing Argument",message="Argument #methodArguments[i].name# was required when calling #missingMethodName#() on #variables.meta.name# but was not passed in. Check the argument and make sure it was not a null value");
 				}
 				
 			}
@@ -109,6 +103,7 @@ component accessors="true" {
 
 			if(structKeyExists(methodSignatures[arguments.missingMethodName],"returnType"))
 			{
+
 				methodReturnType = methodSignatures[arguments.missingMethodName].returnType
 				if(isType(methodReturnType,result) IS false)
 				{
@@ -186,9 +181,19 @@ component accessors="true" {
 	private function buildMethodSignatures()
 	{
 		//structAppend(variables.meta.functions);
-		var allFunctions = variables.meta.functions;
-		var workingStruct = variables.meta.extends;
-		
+		var allFunctions = [];
+		var workingStruct = {};
+
+		if(structKeyExists(variables.meta,"functions"))
+		{
+			var allFunctions = variables.meta.functions;	
+		}
+
+		if(structKeyExists(variables.meta,"extends"))
+		{
+			var workingStruct = variables.meta.extends;
+		}
+				
 		while(workingStruct.name IS NOT "railo-context.Component")
 		{
 			allFunctions = arrayMerge(allFunctions,workingStruct.functions);
@@ -199,7 +204,14 @@ component accessors="true" {
 		if(variables.meta.fullname CONTAINS "proxy")
 		{
 			var proxyMeta = getMetaData(variables.component.object);
-			proxyFunctions = proxyMeta.functions;
+			
+			proxyFunctions = [];
+
+			if(structKeyExists(proxyMeta,"functions"))
+			{
+				proxyFunctions = proxyMeta.functions;
+			}
+			
 			variables.realComponentPath = proxyMeta.fullName;
 
 			allFunctions = arrayMerge(allFunctions,proxyFunctions);
@@ -210,20 +222,34 @@ component accessors="true" {
 				allFunctions = arrayMerge(allFunctions,workingStruct.functions);
 				workingStruct = workingStruct.extends;
 			}
-			
-			
 		}
-		
 
 		for(item in allFunctions)
 		{
 			//Create a method signature object. We take the meta data and extract out the function list from an array
 			//to a struct with the keys being the function name. This makes it easier to work with as we can do a simmple
 			//struct lookup
+
 			methodSignatures[item.name] = item;
 
 			//Set the invocations on this method to 0. We count each invocation of the methods
 			methodCallCounts[item.name] = 0;
+
+			/* Properties of the class that have generated getters do not have real return types and they will always be set to string. As such we need
+			to set them to Any so that any mock overrides will not error for invalid types*/
+			if(variables.meta.accessors IS true OR variables.meta.persistent IS true) //Either persistent entities or components with accessors will have this problem
+			{
+				for(var prop in variables.meta.properties)
+				{
+					if(NOT (structKeyExists(prop,"getter") AND prop.getter IS false)){
+						if(structKeyExists(methodSignatures,"get#prop.name#"))
+						{
+							methodSignatures["get#prop.name#"].returnType = "any";
+						}
+					}
+				}	
+			}
+			
 		}
 	}
 
