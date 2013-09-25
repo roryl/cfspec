@@ -144,39 +144,47 @@ component {
 							//Create a getType utility object on the mock as this will be used when assessing the returnType
 							finalSubObject.getType = createObject("component","cfspec.core.spec.getType");
 
-							//In order to create a proxy to the real method call, we need to first copy the real method to a proxy method
-							finalSubObject["_#mockFunctionName#"] = finalSubObject[mockFunctionName];
+							/* Confirming the return value of the function call on the mock. This only works for when 
+							the function actually exists, and not when the mock under test uses onMissingMethod. This is because
+							we can't override the proxy method as the proxy method doesn't exist. It may be possible to pass the proxy to another
+							proxy object to then do the call, but for now, if it is a proxy object we will just ignore checking the return type */							
+							if(structKeyExists(finalSubObject,"mockFunctionName"))
+							{
+								//In order to create a proxy to the real method call, we need to first copy the real method to a proxy method
+								finalSubObject["_#mockFunctionName#"] = finalSubObject[mockFunctionName];
 
-							//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
-							finalSubObject["#mockFunctionName#"] = function(){
-								
-								result = evaluate("this._#variables.specContext.functionName#(argumentCollection=arguments)");
+								//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
+								finalSubObject["#mockFunctionName#"] = function(){
+									
 
-								if(structKeyExists(variables.specContext.context,"then"))
-								{	
-									if(structKeyExists(variables.specContext.context.then,"returns"))
-									{
-										resultType = this.getType.init(result);
-										
-										returnType = variables.specContext.context.then.returns;
-										if(returnType CONTAINS "is")
-										{
-											returnType = replaceNoCase(returnType,"is","");
-										}
-										else if(isBoolean(returnType))
-										{
-											resultType = result;
-										}
+									result = evaluate("this._#variables.specContext.functionName#(argumentCollection=arguments)");
 
-										if(resultType IS NOT returnType)
+									if(structKeyExists(variables.specContext.context,"then"))
+									{	
+										if(structKeyExists(variables.specContext.context.then,"returns"))
 										{
-											throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
+											resultType = this.getType.init(result);
+											
+											returnType = variables.specContext.context.then.returns;
+											if(returnType CONTAINS "is")
+											{
+												returnType = replaceNoCase(returnType,"is","");
+											}
+											else if(isBoolean(returnType))
+											{
+												resultType = result;
+											}
+
+											if(resultType IS NOT returnType)
+											{
+												throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
+											}
 										}
 									}
-								}
-								
-								return result;
-							};	
+									
+									return result;
+								};
+							}	
 
 
 							variables[arguments.mockObjectName] = finalSubObject;
