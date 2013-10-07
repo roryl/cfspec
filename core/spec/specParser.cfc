@@ -48,12 +48,12 @@ component {
 		{
 			application.specFiles = getSpecFiles(arguments.specDirectory,"*.spec");	
 		}
-
+		
 
 		for(var file in application.specFiles)
 		{
 			try{
-				parseSpec(application.specFiles[file].path,arguments.outputPath);	
+				parseSpec(file.path,arguments.outputPath);	
 			}
 			catch(any e)
 			{
@@ -66,7 +66,7 @@ component {
 	}
 
 	private function getSpecFiles(required mapping,required filter){
-		var output = {};
+		var output = [];
 
 		files = directoryList(expandPath(arguments.mapping),true,"query",arguments.filter);	
 		
@@ -77,8 +77,8 @@ component {
 			
 			//finalpath = replace(finalpath,"/",".","all");
 			//finalpath = replace(finalpath,"\",".","all");
-
-			output[template].path = "#mapping##finalPath#/#template#";
+			arrayAppend(output,{file=template,path="#mapping##finalPath#/#template#"});
+			//output[template].path = "#mapping##finalPath#/#template#";
 		}
 		
 		return output;
