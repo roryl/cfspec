@@ -207,15 +207,19 @@ component {
 						o('public function #name#_#clean#(){');
 						//Function body	
 						tab(2);
-						if(structKeyExists(func[context],"setup"))
+
+
+						if(structKeyExists(spec.tests[name],"setup"))
 						{
+
 							o('//Get the setup function for the test')
 							o('var testSetup = variables.spec.tests.#name#.setup')
 							o('//Call the setup function for the test')
 							o('testSetup()')
 							
 						}
-												
+
+		
 						if(structKeyExists(spec,"factory"))							
 						{
 							o('//A factory was defined in the test and so we call it. The factory is defined if the component under test has a special creation routine other than just "new"')

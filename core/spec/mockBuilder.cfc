@@ -8,8 +8,8 @@
 
 component {
 
-	public function init(required parent, required specPath, required functionName, required contextName){
-		
+	public function init(required parent, required specPath, required functionName, required contextName,skipMocks=false){
+		this.log("mocking #arguments.specPath#");
 		/*
 		TASKS -
 			This function will be given component undertest, the specification and the context path that we are on. 
@@ -26,10 +26,12 @@ component {
 		include template="#arguments.specPath#";
 
 
-
-		if(structKeyExists(spec,"mockObjects"))
+		/* The skipMocks flag is provided for when we are already passing in reference to a component under test. This will occur
+		when the specification describes overriding a function of the component under test. In that situation, the CUT is passed back in
+		so as to override the function. However, to ensure that no other parameters are incorrectly mocked, we can flag it to skip mocks
+		  */
+		if(structKeyExists(spec,"mockObjects") AND arguments.skipMocks IS False)
 		{
-
 
 			mocks = spec.mockObjects;//The objects within the component under test that need to be mocked
 			//Create a closure on the object to that we can mock out the dependencies. This allows us to access the internal scope of the object at runtime
@@ -56,6 +58,11 @@ component {
 		
 		context = spec.tests[arguments.functionName]["#arguments.contextName#"];
 		
+		//If the specification has a setup function, we need to call it
+		if(structKeyExists(spec.tests[arguments.functionName],"setup")){
+			spec.tests[arguments.functionName].setup();
+		}
+
 
 		//Overriding the instance variables
 		/* WHEN keyword - Defines the variables that must exist within the component or in other scopes. Then WHEN represents the 'state' of the componet or environment 
@@ -96,7 +103,7 @@ component {
 				include template="#arguments.specPath#";
 				var value = evaluate("spec.#arguments.mockValuePath#")
 				
-				
+				//Set the mock return value
 				variables[arguments.mockObject].method(arguments.mockFunction).returns(value);
 			}
 			
@@ -115,9 +122,11 @@ component {
 				{	
 
 					/*
-					The context being sent to the mockBuilder is that of the mimic'd function. 
+					The context being sent to the mockBuilder is that of the mimic'd function. We also set the glag skipMocks to true because
+					we are passing in a reference to the already mocked object. We won't want to remock dependencies which may have already been
+					overridden.
 					*/
-					parent = new mockBuilder(parent=parent,specPath=arguments.specPath,functionName=mockFunction,contextName=mockedFunctions[mockFunc].mimic);
+					parent = new mockBuilder(parent=parent,specPath=arguments.specPath,functionName=mockFunction,contextName=mockedFunctions[mockFunc].mimic,skipMocks=true);
 					
 				}
 
@@ -132,7 +141,7 @@ component {
 
 				else if(isStruct(mockedFunctions[mockFunc]) AND structKeyExists(mockedFunctions[mockFunc],"mimic")) 
 				{
-
+					this.log("mock mimic #mockFunc#");
 					mockContextName = mockedFunctions[mockFunc].mimic;
 					//We need a real mock for this function that uses the real function call and real object
 					parent.mimic = function(required mockObjectName,mockfunctionName,mockContextName){
@@ -165,79 +174,109 @@ component {
 							}
 						}
 						subObject.setSpecContext(spec,arguments.mockFunctionName,arguments.mockContextName);
+						
 
 						//Create the final subItem by mocking itself. We do this by recursively calling the mockBuilder with each spec
 						finalsubObject = new cfspec.core.spec.mockBuilder(subObject,specPath,arguments.mockFunctionName,arguments.mockContextName);
+						
 
 						//Create a getType utility object on the mock as this will be used when assessing the returnType
 						finalSubObject.getType = createObject("component","cfspec.core.spec.getType");
 
-						/* Confirming the return value of the function call on the mock. This only works for when 
-						the function actually exists, and not when the mock under test uses onMissingMethod. This is because
-						we can't override the proxy method as the proxy method doesn't exist. It may be possible to pass the proxy to another
-						proxy object to then do the call, but for now, if it is a proxy object we will just ignore checking the return type */							
-						if(structKeyExists(finalSubObject,"mockFunctionName"))
+
+						/* The function being mocked may be a real function, or it could be a proxy function via onMissingMethod
+						Depending on this, we are going to create a proxy method to the real function, or a proxy to onMissingMethod */							
+						if(structKeyExists(finalSubObject,"#mockFunctionName#"))
 						{
 							//In order to create a proxy to the real method call, we need to first copy the real method to a proxy method
 							finalSubObject["_#mockFunctionName#"] = finalSubObject[mockFunctionName];
 
-							//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
-							finalSubObject["#mockFunctionName#"] = function(){
-								
+						}
+						else if(structKeyExists(finalSubObject,"onMissingMethod"))
+						{
+							
+								finalSubObject["_onMissingMethod"] = finalSubObject["onMissingMethod"];
+								mockFunctionName = "onMissingMethod";
+						}
+						//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
+						finalSubObject["#mockFunctionName#"] = function(){
 
+
+							if(structKeyExists(this,"#variables.specContext.functionName#"))
+							{
 								result = evaluate("this._#variables.specContext.functionName#(argumentCollection=arguments)");
+								
+							}
+							else if(structKeyExists(this,"onMissingMethod")){
+								result = evaluate("this._onMissingMethod(argumentCollection=arguments)");
+							}
 
-								if(structKeyExists(variables.specContext.context,"then"))
-								{	
-									if(structKeyExists(variables.specContext.context.then,"returns"))
+							if(structKeyExists(variables.specContext.context,"then"))
+							{	
+								if(structKeyExists(variables.specContext.context.then,"returns"))
+								{							
+									
+									returnType = variables.specContext.context.then.returns;
+									
+									if(returnType IS "void")
 									{
-										resultType = this.getType.init(result);
-										
-										returnType = variables.specContext.context.then.returns;
-										if(returnType CONTAINS "is")
+										if(isDefined('result'))
 										{
-											returnType = replaceNoCase(returnType,"is","");
+											throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned a value. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
 										}
-										else if(isBoolean(returnType))
+										else
 										{
-											resultType = result;
-										}
-
-										if(resultType IS NOT returnType)
-										{
-											throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
+											resultType = "void";
 										}
 									}
-								}
-								
-								return result;
-							};
-						}	
+									else if(returnType CONTAINS "is")
+									{
+										resultType = this.getType.init(result);
+										returnType = replaceNoCase(returnType,"is","");
+									}
+									else if(isBoolean(returnType))
+									{
+										resultType = result;
+									}
 
+									if(resultType IS NOT returnType)
+									{
+										throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
+									}
+																	
+								}
+							}
+							if(isDefined("result"))
+							{
+								return result;
+							}
+							
+						};
 
 						variables[arguments.mockObjectName] = finalSubObject;
 
-
 					};
-					parent.mimic(mockObject,mockFunction,mockContextName);
+					parent.mimic(mockObject,mockFunction,mockContextName);					
+
 				}
 				else
-				{	
-					
+				{
 					var mockValuePath = 'tests.#functionName#["#contextName#"].with["#mockFunc#"]';
 					parent.mockFunction(mockObject,arguments.specPath,mockFunction,mockValuePath);
 					
 				}
 				
-				
 			}
 		}
 		} catch(any e){
 			writeDump(arguments);
-			writeDump(e);
-			abort;
+			writeDump(e);			
 		}
 		
 		return parent;
+	}
+
+	public function log(required string message){
+		//writeLog(file="mockBuilder",text=arguments.message);
 	}
 }
