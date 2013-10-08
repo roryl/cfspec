@@ -145,8 +145,10 @@ component {
 					o('include template="#variables.specFilePath#";')
 					o('variables.spec = spec')
 
+					//If There is a setup function defined in the spec
 					if(structKeyExists(spec,"setup"))
 					{
+						o('//Call the setup function that is defined in the spec')
 						o('spec.setup();')
 					}
 					tab(0);tab(1);
@@ -154,8 +156,7 @@ component {
 					nl()
 
 				var metaData = getComponentMetaData(spec.class);
-				//writeDump(metaData);
-				//abort;
+				
 				//If the spec describes a persistent entity, then we can automatically build out tests to test the 
 				//entity methods
 				if(structKeyExists(metaData,"persistent") and metaData.persistent IS true)
@@ -182,13 +183,12 @@ component {
 						o('ORMFlush();')
 						tab("-1");
 					o('}')
-					//writeDump(simpleProps);
-					//abort;
-
+					
 				}
 					
-				for(name in spec.tests)//For each of the tested functions
+				for(name in spec.tests)//For each of the tested functions defined in the specification
 				{
+					//IF there was a setup function specified, it was used above. But now we need to delete it as we don't need it for the tests
 					if(structKeyExists(spec.tests[name],"setup"))
 					{
 						//Duplicate the test so that we can delete values without affecting the original
@@ -207,7 +207,7 @@ component {
 						o('public function #name#_#clean#(){');
 						//Function body	
 						tab(2);
-						if(structKeyExists(spec.tests[name],"setup"))
+						if(structKeyExists(func[context],"setup"))
 						{
 							o('//Get the setup function for the test')
 							o('var testSetup = variables.spec.tests.#name#.setup')
@@ -215,9 +215,7 @@ component {
 							o('testSetup()')
 							
 						}
-						
-						
-						
+												
 						if(structKeyExists(spec,"factory"))							
 						{
 							o('//A factory was defined in the test and so we call it. The factory is defined if the component under test has a special creation routine other than just "new"')
@@ -237,250 +235,8 @@ component {
 							o('}')
 						o('test.setSpec(variables.spec.tests.#name#["#context#"]);')
 
+						o('//Pass the component under test to the mockBuilder. The mock builder will mock out state and dependencies as described by the spec')
 						o('test = new cfspec.core.spec.mockBuilder(test,"#variables.specFilePath#","#name#","#context#")')
-
-						/*if(structKeyExists(spec,"mockObjects"))
-						{
-							mocks = spec.mockObjects;//The objects within the component under test that need to be mocked
-							o('//Create a closure on the object to that we can mock out the dependencies. This allows us to access the internal scope of the object at runtime')
-							o('test.mockOverride = function(variableName){variables[##arguments.variableName##] = new cfspec.core.mock(variables[##arguments.variableName##]);};')
-							
-							for(var mock in mocks)
-							{
-								o('//Override the #mock# object within the component under test with a mock version')
-								o('test.MockOverride("#mock#");');nl();tab(2);
-							}
-						}*/
-						
-
-						/* WHEN keyword - Defines the variables that must exist within the component or in other scopes. Then WHEN represents the 'state' of the componet or environment 
-						when under test.*/
-						
-						/*
-						if(structKeyExists(func[context],"when"))
-						{
-							when = func[context].when;//The state of the system under test
-							o('//Create a closure on the object so that we can overwrite variables that may exist within the object. We need to perform the override within the scope')
-							o('//of the component under test because the variables may be in any valid coldfusion scopes, variables, request, session, etc')
-							o('test.overrideVariable = function(variableName){')
-								tab(3);		
-								o('//We need to import the spec into the internal scope of the component under test in order to call functions conainted with the spec. Any functions within the spec')
-								o('//error for not being found unless they are loaded within the scope of the caller.')
-								o('include template="#variables.specFilePath#";')
-
-								o('//Get the value of the variable as described in the spec')
-								o('var value = spec.tests.#name#["#context#"].when["##variableName##"];')
-								o('//Set the value of the variableName passed in with the value obtained from the spec')
-								o('evaluate("##variableName## = value");')
-								tab(2);
-							o('}');
-							nl(2);tab(2);
-
-							//Overwrite any other variables as defined in the spec
-							for(varName in when)
-							{
-								o('//Call the overriding function to ovverride this variable')
-								o('test.overrideVariable("#varName#");')
-							}
-						}
-						*/
-
-
-						/* WITH keyword - Defines the function overrides for the collaborating objects that we are working with. There are multiple ways that we can mock out the collaborators:
-
-							1. Default Mock - If the dependency was described as a MockObject in the spec, then all of the dependencies functions will return nothing. We therefore need to 
-											  override the functions that we want to return something, described below
-								2. Simple Override - We can tell the function to return a simple value by specifying in the spec the value that it should return. 
-								3. Function Override - Give the mock function a full new function. This is most similar to traditional mocking where you mock out the function with a replacement
-								4. Impersonate Test - Tell the mock to impersonate a specific specification of the real object. This allows the mock to adhere to the real API but return 
-													  fake values, and also not have to specify this mock scneario multiple times.
-
-							 */
-
-
-
-						/*
-						if(structKeyExists(func[context],"with"))
-						{
-
-							o('test.mockFunction = function(mockObject,mockFunction,mockValuePath){')
-								tab(3);
-								o('include template="#variables.specFilePath#"')
-								o('var value = evaluate("spec.##mockValuePath##")')
-								o('variables[arguments.mockObject].method(arguments.mockFunction).returns(value);')
-							tab(2);
-							o('}')
-							nl();
-
-							var MockedFunctions = func[context].with;
-								
-							//Mock any methods which were requests to be mocked
-							for(var mockFunc in mockedFunctions)
-							{
-								var mockObject = listFirst(mockFunc,".");
-								var mockFunction = listLast(mockFunc,".");
-
-								//If it is a simple value then we can just pass in the value 
-								if(isSimpleValue(mockedFunctions[mockFunc]))
-								{	
-									o('var mockValuePath = ''tests.#name#["#context#"].with["#mockFunc#"]''')
-									o('test.mockFunction("#mockObject#","#mockFunction#",mockValuePath) ;'); //Return it as a string
-								}
-
-								else if(isStruct(mockedFunctions[mockFunc]) AND structKeyExists(mockedFunctions[mockFunc],"impersonateTest")) 
-								{
-									//We need a real mock for this function that uses the real function call and real object
-										o('test.impersonateTest = function(required mockObjectName){')
-											tab(3);
-											o('//Get the specification of the real object so that we can determine what needs to be mocked')
-											o('realMockPath = variables[arguments.mockObjectName].getRealComponentPath();')
-											o('specPath = replace(realMockPath,".","/","all");')
-											
-											o('//Build the spec of the object')
-											o('include template="/##lcase(specPath)##.spec";')
-
-										
-											o('//Call the factory method from the spec to build the object')
-											o('newObject = spec.factory();')
-
-											o('//Set the spec into the object as we may need to use it later')
-											o('newObject.setSpec = function(spec){')
-												o('variables.spec = arguments.spec;')
-											o('}')
-											
-											o('newObject.setSpec(spec);')
-
-											o('if(structKeyExists(spec,"mockObjects")){')
-												tab("+1")
-												o('//Get the objects that we are going to need to mock out from the spec')
-												o('mocks = spec.mockObjects;')
-
-												o('//Create a function that we can pass in the overrides to')
-												o('newObject.mockOverride = function(variableName){variables[##arguments.variableName##] = new cfspec.core.mock(variables[##arguments.variableName##]);}')
-
-												o('//Overwrite any of the objects dependencies with mocks as specified in the spec')
-												o('for(var mock in mocks)')
-												o('{')
-													o('//Call overriding mock')
-													o('newObject.MockOverride("##mock##");')
-												o('}')
-												tab("-1")
-											o('}')
-										
-
-											o('//Get the specification of the test that we are impersonating, which will tell us what methods need to be mocked')
-											o('impersonatedTest = spec.tests["#mockFunction#"]["#mockedFunctions[mockFunc].impersonateTest#"];')
-
-											o('newObject.setImpersonatedTest = function(impersonatedTest){')
-												o('variables.impersonatedTest = arguments.impersonatedTest;')
-											o('}')
-											o('newObject.setImpersonatedTest(impersonatedTest);')
-											
-											o('//Create an override so that we can mock out the method retruns of the mocks')
-											o('newObject.mockFunction = function(mockObject,mockFunction,value){')
-												o('variables[arguments.mockObject].method(arguments.mockFunction).returns(evaluate(arguments.value));')
-											o('}')
-
-											o('//Override the methods on the mock based on the specification.')
-											o('//TODO - Right now the second level mock only allows simple values. If this mock itself depends on a third level mock, we will need to')
-											o('//add support for that later. We can accomplish it by looking the third level mock and merely retruning the return value of the third level')
-											o('for(newMock in impersonatedTest.with)')
-											o('{')
-												o('newMockObject = listFirst(newMock,".");')
-												o('newMockFunction = listLast(newMock,".");')
-												o('newMockValue = impersonatedTest.with[newMock];')
-												o('newObject.mockFunction(newMockObject,newMockFunction,serialize(newMockValue));')
-												
-											o('}')
-
-											o('//Now that we have setup the new object and its mocks, we need to override the newObject method with a proper')
-											o('//innvocation of the method based on the specification. We save the real method into a new method name') 
-											o('newObject._#mockFunction# = newObject.#mockFunction#;')
-
-											o('//No we overrite the real method so that we can proxy to the old method and pass in the correct parameters')											
-											o('newObject.#mockFunction# = function(){')
-
-												
-												
-												
-
-												
-												
-												o('//Create a closure on the object so that we can overwrite variables')
-												o('this.override = function(variableName,value){')
-														o('if(listFirst(arguments.variableName,".") IS "request")')
-														o('{')
-															o('var remainder = listDeleteAt(arguments.variableName,1,".");')
-															o('request[remainder] = arguments.value')
-														o('}')
-														o('else')
-														o('{')
-															o('##arguments.variableName## = arguments.value;')	
-														o('}')
-														
-													o('}')
-												o('if(structKeyExists(variables.impersonatedTest,"when")){')
-													tab(4)
-													o('//Get the predicates that need to be setup')
-													o('when = variables.impersonatedTest.when;')
-													o('//Overwrite any other variables as defined in the spec')
-													o('for(varName in when)')
-													o('{')
-														tab(5);
-														o('//Call overriding functions')
-														o('this.override("##varName##",##serialize(when[varName])##);')
-													tab(4);
-													o('}')
-												tab(3);
-												o('}')
-												o('//Call the function that we duplicated')
-
-												o('if(structKeyExists(variables.impersonatedTest,"given")){')
-													tab("+1")
-													o('if(isClosure(variables.impersonatedTest.given)){')
-														tab("+1")
-														o('//Get the parameters that need to be passed into the function')
-														o('given = variables.impersonatedTest.given();')
-														tab("-1")
-													o('} else{')
-														tab("+1")
-														o('given = variables.impersonatedTest.given;')
-														tab("-1")
-													o('}')
-													tab("-1")
-												o('}')
-
-												o('result = this._checkEmailExists(argumentCollection=given);')
-
-
-												o('if(result IS NOT impersonatedTest.then.returns)')
-												o('{')
-													o('throw(message="The collaborator return value from ##variables.spec.class## did not match its specification. It should have returned ##impersonatedTest.then.returns## but returned ##result ##. The tested specification was: #mockFunction# ''#mockedFunctions[mockFunc].impersonateTest#''");')
-												o('}')
-
-												o('return result;')
-											o('}')
-											
-											o('//Set the new object into the')
-											o('variables[arguments.mockObjectName] = newObject;')
-
-
-										o('};');
-									o('test.impersonateTest("#mockObject#");');
-								}
-								else
-								{	
-									
-									o('var mockValuePath = "tests.#name#[""#context#""].with[""#mockFunc#""]"')
-									o('test.mockFunction("#mockObject#","#mockFunction#",mockValuePath);');
-									
-								}
-								
-								
-							}
-						}*/
-
-
 
 						if(structKeyExists(func[context],"given"))
 						{
@@ -493,7 +249,7 @@ component {
 							}
 							//Serialize any arguments which are intended
 							o('coll = #serialize(args)#;');
-							//Call the method under test
+							//Call the method under test passing in the variables
 							o('var testResult = test.#name#(argumentCollection=coll);');
 						}
 						else
