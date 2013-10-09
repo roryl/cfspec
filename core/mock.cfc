@@ -18,9 +18,11 @@ component accessors="true" {
 	property name="mockSpec";
 	property name="realComponentPath" hint="If the mocked object is a proxy, the real object is hidden which can interfere with introspection. We get the real path and save it for future use";
 
-	public function init(required componentPath){
+	
 
+	public function init(required componentPath){
 		
+		//writeDump("#componentPath#");
 		if(NOT isObject(arguments.componentPath)){
 			variables.component = createObject("component",arguments.componentPath);	
 		}
@@ -32,16 +34,18 @@ component accessors="true" {
 		variables.methodReturns = {};
 		variables.methodSignatures = {};
 		variables.lastMethodReturnState = "";
-
+		
 		//Set it to the current mocked full name. But this may be overridden when building out the methodSignatures if this mock is a proxy
 		variables.realComponentPath=variables.meta.fullName;
+		
 		buildMethodSignatures();
-
+		
 		return this;
 	}
 
 	public function onMissingMethod(required missingMethodName,missingMethodArguments)
 	{
+		
 		//Check if the function being called exists, if it does not then we need to throw an error
 		if(NOT structKeyExists(methodSignatures,arguments.missingMethodName))
 		{
@@ -49,23 +53,23 @@ component accessors="true" {
 		}
 		
 		//Check that all of the methods parameters have been passed in
-		methodArguments = methodSignatures[arguments.missingMethodName].parameters;
-		for(var i=1; i LTE methodArguments.len(); i=i+1)
+		var methodArguments = methodSignatures[arguments.missingMethodName].parameters;
+		for(var i=1; i LTE local.methodArguments.len(); i=i+1)
 		{
 
 			//Check the arguments being passed in agains the types. There ae two options: Positional or Names
-			if(arePositionalArguments(missingMethodArguments) or StructIsEmpty(arguments.missingMethodArguments))
+			if(arePositionalArguments(arguments.missingMethodArguments) or StructIsEmpty(arguments.missingMethodArguments))
 			{
-				key = i;
+				var key = i;
 			}
 			else //Are Named arguments, we need to test these differently
 			{
-				key = methodArguments[i].name;
+				var key = local.methodArguments[i].name;
 			}
 
-			if(methodArguments[i].required)
+			if(local.methodArguments[i].required)
 			{
-				if(NOT structKeyExists(missingMethodArguments,key))
+				if(NOT structKeyExists(arguments.missingMethodArguments,local.key))
 				{
 					throw(type="Missing Argument",message="Argument #methodArguments[i].name# was required when calling #missingMethodName#() on #variables.meta.name# but was not passed in. Check the argument and make sure it was not a null value");
 				}
@@ -79,7 +83,7 @@ component accessors="true" {
 
 
 
-			if(isType(methodArguments[i].type,missingMethodArguments[key]) IS false)
+			if(isType(local.methodArguments[i].type,arguments.missingMethodArguments[local.key]) IS false)
 			{	
 				
 				throw(type="Invalid Type",message="Argument #methodArguments[i].name# was of the wrong type when calling #missingMethodName#() on #variables.meta.name#, it must be of type: #methodArguments[i].type#");
@@ -87,46 +91,47 @@ component accessors="true" {
 		}
 		
 		//Increment the number of times that we have called this method
-		methodCallCounts[missingMethodName] = methodCallCounts[missingMethodName] + 1;
+		variables.methodCallCounts[arguments.missingMethodName] = variables.methodCallCounts[arguments.missingMethodName] + 1;
 
 		//Finally if the method should specify a return value, we will call it
-		if(structKeyExists(methodReturns,missingMethodName))
+		if(structKeyExists(variables.methodReturns,arguments.missingMethodName))
 		{
-			if(isClosure(methodReturns[missingMethodName]))
+			if(isClosure(variables.methodReturns[arguments.missingMethodName]))
 			{
-				result = variables.methodReturns[missingMethodName]();
+				var result = variables.methodReturns[arguments.missingMethodName]();
 			}
 			else
 			{
-				result = variables.methodReturns[missingMethodName];	
+				var result = variables.methodReturns[arguments.missingMethodName];	
 			}
 
-			if(structKeyExists(methodSignatures[arguments.missingMethodName],"returnType"))
+			if(structKeyExists(variables.methodSignatures[arguments.missingMethodName],"returnType"))
 			{
 
-				methodReturnType = methodSignatures[arguments.missingMethodName].returnType
-				if(isType(methodReturnType,result) IS false)
+				var methodReturnType = variables.methodSignatures[arguments.missingMethodName].returnType
+				if(isType(local.methodReturnType,result) IS false)
 				{
 					throw(type="Invalid Type",message="Return type was of the wrong type when calling #missingMethodName#() on #variables.meta.name#, it must be of type: #methodReturnType#");
 				}	
 			}
-			return result;
+
+			return local.result;
 			
 		}
 
 
-
+		
 		
 	}
 
 	public function Count(required string methodName)
 	{
-		return methodCallCounts[arguments.methodName];
+		return variables.methodCallCounts[arguments.methodName];
 	}
 
 	public function method(required string methodName, string state)
 	{
-		if(NOT structKeyExists(methodSignatures,arguments.methodName))
+		if(NOT structKeyExists(variables.methodSignatures,arguments.methodName))
 		{
 			throw(message="Method #arguments.MethodName# does not exist in component and so you cannot fake this method #variables.meta.name#",type="Missing Method");
 		}
@@ -180,24 +185,26 @@ component accessors="true" {
 
 	private function buildMethodSignatures()
 	{
+		request.end = 0;
+
 		//structAppend(variables.meta.functions);
 		var allFunctions = [];
 		var workingStruct = {};
 
 		if(structKeyExists(variables.meta,"functions"))
 		{
-			var allFunctions = variables.meta.functions;	
+			local.allFunctions = variables.meta.functions;	
 		}
 
 		if(structKeyExists(variables.meta,"extends"))
 		{
-			var workingStruct = variables.meta.extends;
+			local.workingStruct = variables.meta.extends;
 		}
-				
-		while(workingStruct.name IS NOT "railo-context.Component")
+			
+		while(local.workingStruct.name IS NOT "railo-context.Component")
 		{
-			allFunctions = arrayMerge(allFunctions,workingStruct.functions);
-			workingStruct = workingStruct.extends;
+			local.allFunctions = arrayMerge(local.allFunctions,local.workingStruct.functions);
+			local.workingStruct = local.workingStruct.extends;
 		}
 
 		//Check if this is a proxy object and if so, we want to get the base object and get its methods so that we can check against their signatures
@@ -205,52 +212,57 @@ component accessors="true" {
 		{
 			var proxyMeta = getMetaData(variables.component.object);
 			
-			proxyFunctions = [];
+			var proxyFunctions = [];
 
-			if(structKeyExists(proxyMeta,"functions"))
+			if(structKeyExists(local.proxyMeta,"functions"))
 			{
-				proxyFunctions = proxyMeta.functions;
+				local.proxyFunctions = local.proxyMeta.functions;
 			}
 			
 			variables.realComponentPath = proxyMeta.fullName;
 
-			allFunctions = arrayMerge(allFunctions,proxyFunctions);
-			workingStruct = proxyMeta.extends;
+			local.allFunctions = arrayMerge(local.allFunctions,local.proxyFunctions);
+			local.workingStruct = local.proxyMeta.extends;
 
-			while(workingStruct.name IS NOT "railo-context.Component")
+			while(local.workingStruct.name IS NOT "railo-context.Component")
 			{
-				allFunctions = arrayMerge(allFunctions,workingStruct.functions);
-				workingStruct = workingStruct.extends;
+				local.allFunctions = arrayMerge(local.allFunctions,local.workingStruct.functions);
+				local.workingStruct = local.workingStruct.extends;
 			}
 		}
-
-		for(item in allFunctions)
+		
+		for(var item in local.allFunctions)
 		{
+			
 			//Create a method signature object. We take the meta data and extract out the function list from an array
 			//to a struct with the keys being the function name. This makes it easier to work with as we can do a simmple
 			//struct lookup
-
-			methodSignatures[item.name] = item;
-
+			
+			//structUpdate(variables.methodSignatures,item.name,item);
+			variables.methodSignatures[local.item.name] = local.item;
+			
 			//Set the invocations on this method to 0. We count each invocation of the methods
-			methodCallCounts[item.name] = 0;
+			variables.methodCallCounts[local.item.name] = 0;
 
 			/* Properties of the class that have generated getters do not have real return types and they will always be set to string. As such we need
 			to set them to Any so that any mock overrides will not error for invalid types*/
 			if(variables.meta.accessors IS true OR variables.meta.persistent IS true) //Either persistent entities or components with accessors will have this problem
 			{
+
 				for(var prop in variables.meta.properties)
 				{
-					if(NOT (structKeyExists(prop,"getter") AND prop.getter IS false)){
-						if(structKeyExists(methodSignatures,"get#prop.name#"))
+					if(structKeyExists(prop,"getter") AND prop.getter IS false){
+						if(structKeyExists(variables.methodSignatures,"get#prop.name#"))
 						{
-							methodSignatures["get#prop.name#"].returnType = "any";
+							variables.methodSignatures["get#prop.name#"].returnType = "any";
 						}
 					}
 				}	
 			}
 			
+			
 		}
+		
 	}
 
 	private function arePositionalArguments(required struct missingMethodArguments)

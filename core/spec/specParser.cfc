@@ -20,7 +20,7 @@ component {
 	public function parseSpec(required filePath, outputPath)
 	{
 
-		writeDump(arguments);
+		
 		
 		var specFileName = listGetAt(filePath,listLen(filePath,"/"),"/");
 		var componentUnderTestDirectoryPath = replace(filePath,specFileName,"");
@@ -330,9 +330,9 @@ component {
 			}
 		}
 		catch(any e){
-			writeDump(entityName);
-			writeDump(metaData);
-			writeDump(spec);
+			//writeDump(entityName);
+			//writeDump(metaData);
+			//writeDump(spec);
 			writeDump(e);
 		}
 

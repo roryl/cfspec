@@ -43,7 +43,9 @@ component {
 				var meta = getComponentMetaData(variables[arguments.variableName]);
 				if(NOT meta.name contains "cfspec.core.mock")
 				{
-					variables[arguments.variableName] = new cfspec.core.mock(variables[arguments.variableName]);	
+					
+					variables[arguments.variableName] = new cfspec.core.mock(variables[arguments.variableName]);
+					
 				}
 				
 			};
@@ -157,7 +159,16 @@ component {
 						include template="#specPath#";
 
 						//Call the factory method from the spec to build the object
-						subObject = spec.factory();
+						if(structKeyExists(spec,"factory"))
+						{
+							subObject = spec.factory();
+						}
+						else
+						{
+							//A factory was not defined, so we will create the native object
+							subObject = createObject("component",spec.class);
+						}
+						
 
 						//Set the spec into the object as we may need to use it later
 						subObject.setSpec = function(spec){
@@ -269,8 +280,9 @@ component {
 			}
 		}
 		} catch(any e){
-			writeDump(arguments);
-			writeDump(e);			
+			writeDump(var="#e#",label="Error encounted while in mockBuilder");		
+			writeDump(var="#arguments#",label="The arguments passed to mockBuilder");
+				
 		}
 		
 		return parent;
