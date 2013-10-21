@@ -8,8 +8,8 @@
 
 component {
 
-	public function init(required parent, required specPath, required functionName, required contextName){
-		
+	public function init(required parent, required specPath, required functionName, required contextName,skipMocks=false){
+		this.log("mocking #arguments.specPath#");
 		/*
 		TASKS -
 			This function will be given component undertest, the specification and the context path that we are on. 
@@ -21,200 +21,262 @@ component {
 			3. We need to override the specific collaborators as described in the spec WITH keyword
 		*/
 		try{
-			var spec = "";
-			//Include the spec document. We need a direct reference to it so that any closures can be called
-			include template="#arguments.specPath#";
+		var spec = "";
+		//Include the spec document. We need a direct reference to it so that any closures can be called
+		include template="#arguments.specPath#";
 
 
+		/* The skipMocks flag is provided for when we are already passing in reference to a component under test. This will occur
+		when the specification describes overriding a function of the component under test. In that situation, the CUT is passed back in
+		so as to override the function. However, to ensure that no other parameters are incorrectly mocked, we can flag it to skip mocks
+		  */
+		if(structKeyExists(spec,"mockObjects") AND arguments.skipMocks IS False)
+		{
 
-			if(structKeyExists(spec,"mockObjects"))
-			{
+			mocks = spec.mockObjects;//The objects within the component under test that need to be mocked
+			//Create a closure on the object to that we can mock out the dependencies. This allows us to access the internal scope of the object at runtime
+			parent.mockOverride = function(variableName){
 
-
-				mocks = spec.mockObjects;//The objects within the component under test that need to be mocked
-				//Create a closure on the object to that we can mock out the dependencies. This allows us to access the internal scope of the object at runtime
-				parent.mockOverride = function(variableName){
-
+				//Check if the component is already a mock. If it is, then we can't mock it again because creating a mock
+				//of the mock will just result in an invalid object. This may happen when the component under test is mimicing
+				//One of the other function calls in the spec.
+				var meta = getComponentMetaData(variables[arguments.variableName]);
+				if(NOT meta.name contains "cfspec.core.mock")
+				{
 					variables[arguments.variableName] = new cfspec.core.mock(variables[arguments.variableName]);	
-				};
-				
-				for(var mock in mocks)
-				{
-					//Override the #mock# object within the component under test with a mock version
-					parent.MockOverride("#mock#");
 				}
+				
+			};
+			
+			for(var mock in mocks)
+			{
+				//Override the #mock# object within the component under test with a mock version
+				parent.MockOverride("#mock#");
+			}
+		}
+		
+		
+		context = spec.tests[arguments.functionName]["#arguments.contextName#"];
+		
+		//If the specification has a setup function, we need to call it
+		if(structKeyExists(spec.tests[arguments.functionName],"setup")){
+			spec.tests[arguments.functionName].setup();
+		}
+
+
+		//Overriding the instance variables
+		/* WHEN keyword - Defines the variables that must exist within the component or in other scopes. Then WHEN represents the 'state' of the componet or environment 
+					when under test.*/
+		
+		if(structKeyExists(context,"when"))
+		{
+			var when = context.when;//The state of the system under test
+			/*Create a closure on the object so that we can overwrite variables that may exist within the object. We need to perform the override within the scope
+			of the component under test because the variables may be in any valid coldfusion scopes, variables, request, session, etc*/
+			parent.overrideVariable = function(variableName,specPath,functionName,contextName){
+			
+				//We need to import the spec into the internal scope of the component under test in order to call functions conainted with the spec. Any functions within the spec
+				//error for not being found unless they are loaded within the scope of the caller.
+				var spec = "";
+				include template="#arguments.specPath#";
+
+				//Get the value of the variable as described in the spec
+				var value = spec.tests[functionName]["#arguments.contextName#"].when["#arguments.variableName#"];
+				//Set the value of the variableName passed in with the value obtained from the spec
+				evaluate("#variableName# = value");
+			};
+
+			//Overwrite any other variables as defined in the spec
+			for(varName in when)
+			{
+				//Call the overriding function to ovverride this variable
+				parent.overrideVariable("#varName#",arguments.specPath,arguments.functionName,arguments.contextName);
+			}
+		}
+
+		if(structKeyExists(context,"with"))
+		{
+
+			parent.mockFunction = function(mockObject,specPath,mockFunction,mockValuePath){
+				
+				var spec="";
+				include template="#arguments.specPath#";
+				var value = evaluate("spec.#arguments.mockValuePath#")
+				
+				//Set the mock return value
+				variables[arguments.mockObject].method(arguments.mockFunction).returns(value);
 			}
 			
-			
-			context = spec.tests[arguments.functionName]["#arguments.contextName#"];
-			
-
-			//Overriding the instance variables
-			/* WHEN keyword - Defines the variables that must exist within the component or in other scopes. Then WHEN represents the 'state' of the componet or environment 
-						when under test.*/
-			
-			if(structKeyExists(context,"when"))
-			{
-				var when = context.when;//The state of the system under test
-				/*Create a closure on the object so that we can overwrite variables that may exist within the object. We need to perform the override within the scope
-				of the component under test because the variables may be in any valid coldfusion scopes, variables, request, session, etc*/
-				parent.overrideVariable = function(variableName,specPath,functionName,contextName){
+			var MockedFunctions = context.with;
 				
-					//We need to import the spec into the internal scope of the component under test in order to call functions conainted with the spec. Any functions within the spec
-					//error for not being found unless they are loaded within the scope of the caller.
-					var spec = "";
-					include template="#arguments.specPath#";
-
-					//Get the value of the variable as described in the spec
-					
-					var value = spec.tests[functionName]["#arguments.contextName#"].when["#arguments.variableName#"];
-					//Set the value of the variableName passed in with the value obtained from the spec
-					evaluate("#variableName# = value");
-				};
-
-				//Overwrite any other variables as defined in the spec
-				for(varName in when)
-				{
-					//Call the overriding function to ovverride this variable
-					parent.overrideVariable("#varName#",arguments.specPath,arguments.functionName,arguments.contextName);
-				}
-			}
-
-			if(structKeyExists(context,"with"))
+			//Mock any methods which were requests to be mocked
+			for(var mockFunc in mockedFunctions)
 			{
 
-				parent.mockFunction = function(mockObject,specPath,mockFunction,mockValuePath){
+				var mockObject = listFirst(mockFunc,".");
+				var mockFunction = listLast(mockFunc,".");
+
+				//If the function call being mocked is within the component under test, then we can pass this component under test
+				//again to the to the mock builder, along with the context values being mocked, and those variables will be set.
+				if(mockObject IS "this")
+				{	
+
+					/*
+					The context being sent to the mockBuilder is that of the mimic'd function. We also set the glag skipMocks to true because
+					we are passing in a reference to the already mocked object. We won't want to remock dependencies which may have already been
+					overridden.
+					*/
+					parent = new mockBuilder(parent=parent,specPath=arguments.specPath,functionName=mockFunction,contextName=mockedFunctions[mockFunc].mimic,skipMocks=true);
 					
-					var spec="";
-					include template="#arguments.specPath#";
-					var value = evaluate("spec.#arguments.mockValuePath#")
-					variables[arguments.mockObject].method(arguments.mockFunction).returns(value);
 				}
-				
-				var MockedFunctions = context.with;
+
+				//If it is a simple value then we can just pass in the value 
+				else if(isSimpleValue(mockedFunctions[mockFunc]))
+				{	
+					var mockValuePath = 'tests.#arguments.functionName#["#arguments.contextName#"].with["#mockFunc#"]';
 					
-				//Mock any methods which were requests to be mocked
-				for(var mockFunc in mockedFunctions)
+					parent.mockFunction("#mockObject#",arguments.specPath,"#mockFunction#",mockValuePath) ;; //Return it as a string
+					
+				}
+
+				else if(isStruct(mockedFunctions[mockFunc]) AND structKeyExists(mockedFunctions[mockFunc],"mimic")) 
 				{
-					var mockObject = listFirst(mockFunc,".");
-					var mockFunction = listLast(mockFunc,".");
+					this.log("mock mimic #mockFunc#");
+					mockContextName = mockedFunctions[mockFunc].mimic;
+					//We need a real mock for this function that uses the real function call and real object
+					parent.mimic = function(required mockObjectName,mockfunctionName,mockContextName){
+						
+						//Get the specification of the real object so that we can determine what needs to be mocked
+						realMockPath = variables[arguments.mockObjectName].getRealComponentPath();
+						
+						specPath = replace(realMockPath,".","/","all");
+						specPath = "/#lcase(specPath)#.spec";
+						
+						//Build the spec of the object
+						var spec = "";
+						include template="#specPath#";
 
-					//If it is a simple value then we can just pass in the value 
-					if(isSimpleValue(mockedFunctions[mockFunc]))
-					{	
-						var mockValuePath = 'tests.#arguments.functionName#["#arguments.contextName#"].with["#mockFunc#"]';
-						parent.mockFunction("#mockObject#",arguments.specPath,"#mockFunction#",mockValuePath) ;; //Return it as a string
-					}
+						//Call the factory method from the spec to build the object
+						subObject = spec.factory();
 
-					else if(isStruct(mockedFunctions[mockFunc]) AND structKeyExists(mockedFunctions[mockFunc],"mimic")) 
-					{
-						mockContextName = mockedFunctions[mockFunc].mimic;
-						//We need a real mock for this function that uses the real function call and real object
-							parent.mimic = function(required mockObjectName,mockfunctionName,mockContextName){
+						//Set the spec into the object as we may need to use it later
+						subObject.setSpec = function(spec){
+							variables.spec = arguments.spec;
+						}
+						subObject.setSpec(spec);
+
+						//Set the spec into the object as we need to pass in these values so that we can use them when proxying to the real function call
+						subObject.setSpecContext = function(spec,mockFunctionName,mockContextName){
+							variables.specContext = {
+								functionName:arguments.mockFunctionName,
+								contextName:arguments.mockContextName,
+								context:spec.tests[mockfunctionName]["#mockContextName#"]
+							}
+						}
+						subObject.setSpecContext(spec,arguments.mockFunctionName,arguments.mockContextName);
+						
+
+						//Create the final subItem by mocking itself. We do this by recursively calling the mockBuilder with each spec
+						finalsubObject = new cfspec.core.spec.mockBuilder(subObject,specPath,arguments.mockFunctionName,arguments.mockContextName);
+						
+
+						//Create a getType utility object on the mock as this will be used when assessing the returnType
+						finalSubObject.getType = createObject("component","cfspec.core.spec.getType");
+
+
+						/* The function being mocked may be a real function, or it could be a proxy function via onMissingMethod
+						Depending on this, we are going to create a proxy method to the real function, or a proxy to onMissingMethod */							
+						if(structKeyExists(finalSubObject,"#mockFunctionName#"))
+						{
+							//In order to create a proxy to the real method call, we need to first copy the real method to a proxy method
+							finalSubObject["_#mockFunctionName#"] = finalSubObject[mockFunctionName];
+
+						}
+						else if(structKeyExists(finalSubObject,"onMissingMethod"))
+						{
+							
+								finalSubObject["_onMissingMethod"] = finalSubObject["onMissingMethod"];
+								mockFunctionName = "onMissingMethod";
+						}
+						//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
+						finalSubObject["#mockFunctionName#"] = function(){
+
+
+							if(structKeyExists(this,"#variables.specContext.functionName#"))
+							{
+								result = evaluate("this._#variables.specContext.functionName#(argumentCollection=arguments)");
 								
-								//Get the specification of the real object so that we can determine what needs to be mocked
-								realMockPath = variables[arguments.mockObjectName].getRealComponentPath();
-								
-								specPath = replace(realMockPath,".","/","all");
-								specPath = "/#lcase(specPath)#.spec";
-								
-								//Build the spec of the object
-								var spec = "";
-								include template="#specPath#";
+							}
+							else if(structKeyExists(this,"onMissingMethod")){
+								result = evaluate("this._onMissingMethod(argumentCollection=arguments)");
+							}
 
-								//Call the factory method from the spec to build the object
-								subObject = spec.factory();
-
-								//Set the spec into the object as we may need to use it later
-								subObject.setSpec = function(spec){
-									variables.spec = arguments.spec;
-								}
-								subObject.setSpec(spec);
-
-								//Set the spec into the object as we need to pass in these values so that we can use them when proxying to the real function call
-								subObject.setSpecContext = function(spec,mockFunctionName,mockContextName){
-									variables.specContext = {
-										functionName:arguments.mockFunctionName,
-										contextName:arguments.mockContextName,
-										context:spec.tests[mockfunctionName]["#mockContextName#"]
-									}
-								}
-								subObject.setSpecContext(spec,arguments.mockFunctionName,arguments.mockContextName);
-
-								//Create the final subItem by mocking itself. We do this by recursively calling the mockBuilder with each spec
-								finalsubObject = new cfspec.core.spec.mockBuilder(subObject,specPath,arguments.mockFunctionName,arguments.mockContextName);
-
-								//Create a getType utility object on the mock as this will be used when assessing the returnType
-								finalSubObject.getType = createObject("component","cfspec.core.spec.getType");
-
-								/* Confirming the return value of the function call on the mock. This only works for when 
-								the function actually exists, and not when the mock under test uses onMissingMethod. This is because
-								we can't override the proxy method as the proxy method doesn't exist. It may be possible to pass the proxy to another
-								proxy object to then do the call, but for now, if it is a proxy object we will just ignore checking the return type */							
-								if(structKeyExists(finalSubObject,"mockFunctionName"))
-								{
-									//In order to create a proxy to the real method call, we need to first copy the real method to a proxy method
-									finalSubObject["_#mockFunctionName#"] = finalSubObject[mockFunctionName];
-
-									//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
-									finalSubObject["#mockFunctionName#"] = function(){
-										
-
-										result = evaluate("this._#variables.specContext.functionName#(argumentCollection=arguments)");
-
-										if(structKeyExists(variables.specContext.context,"then"))
-										{	
-											if(structKeyExists(variables.specContext.context.then,"returns"))
-											{
-												resultType = this.getType.init(result);
-												
-												returnType = variables.specContext.context.then.returns;
-												if(returnType CONTAINS "is")
-												{
-													returnType = replaceNoCase(returnType,"is","");
-												}
-												else if(isBoolean(returnType))
-												{
-													resultType = result;
-												}
-
-												if(resultType IS NOT returnType)
-												{
-													throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
-												}
-											}
+							if(structKeyExists(variables.specContext.context,"then"))
+							{	
+								if(structKeyExists(variables.specContext.context.then,"returns"))
+								{							
+									
+									returnType = variables.specContext.context.then.returns;
+									
+									if(returnType IS "void")
+									{
+										if(isDefined('result'))
+										{
+											throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned a value. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
 										}
-										
-										return result;
-									};
-								}	
+										else
+										{
+											resultType = "void";
+										}
+									}
+									else if(returnType CONTAINS "is")
+									{
+										resultType = this.getType.init(result);
+										returnType = replaceNoCase(returnType,"is","");
+									}
+									else if(isBoolean(returnType))
+									{
+										resultType = result;
+									}
 
+									if(resultType IS NOT returnType)
+									{
+										throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
+									}
+																	
+								}
+							}
+							if(isDefined("result"))
+							{
+								return result;
+							}
+							
+						};
 
-								variables[arguments.mockObjectName] = finalSubObject;
+						variables[arguments.mockObjectName] = finalSubObject;
 
+					};
+					parent.mimic(mockObject,mockFunction,mockContextName);					
 
-							};
-						parent.mimic(mockObject,mockFunction,mockContextName);
-					}
-					else
-					{	
-						
-						var mockValuePath = 'tests.#functionName#["#contextName#"].with["#mockFunc#"]';
-						parent.mockFunction(mockObject,arguments.specPath,mockFunction,mockValuePath);
-						
-					}
-					
+				}
+				else
+				{
+					var mockValuePath = 'tests.#functionName#["#contextName#"].with["#mockFunc#"]';
+					parent.mockFunction(mockObject,arguments.specPath,mockFunction,mockValuePath);
 					
 				}
+				
 			}
-		} 
-		catch(any e){
+		}
+		} catch(any e){
 			writeDump(arguments);
-			writeDump(e);
-			throw(e);
-			//abort;
+			writeDump(e);			
 		}
 		
 		return parent;
+	}
+
+	public function log(required string message){
+		//writeLog(file="mockBuilder",text=arguments.message);
 	}
 }
