@@ -251,6 +251,8 @@ component {
 							{
 								args = args();
 							}
+							//Set the arguments into the request scope as they can be referenced in asserts and cleanups
+							o('request.given = #serialize(args)#;');
 							//Serialize any arguments which are intended
 							o('coll = #serialize(args)#;');
 							//Call the method under test passing in the variables
@@ -297,17 +299,35 @@ component {
 								}
 								else if(fact IS "assert")
 								{
-									for(var test in facts[fact])
+									for(var i=1; i LTE arrayLen(facts[fact]); i=i+1)
 									{
+										test = facts[fact][i];
 										if(isStruct(test))
 										{
-											o('assert(evaluate("#test.value#"),"#test.message#");');
+											if(isClosure(test.value))
+											{
+												o('var assertValue = variables.spec.tests.#name#["#context#"].then.assert[#i#].value()')
+												o('assert(assertValue);');
+											}
+											else
+											{
+												o('assert(evaluate("#test.value#"),"#test.message#");');
+											}
 										}
 										else{
 											o('assert(evaluate("#test#"));');	
 										}
 										
 										
+									}
+								}
+
+								else if(fact is "assertTrue")
+								{
+									if(isClosure(facts[fact]))
+									{
+										o('assertValue = variables.spec.tests.#name#["#context#"].then.returns')
+										o('assert();');	
 									}
 								}
 							}
