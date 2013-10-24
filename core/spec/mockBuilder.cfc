@@ -30,7 +30,7 @@ component {
 			2. We need to override the objects instance variables based on the spec WHEN keyword
 			3. We need to override the specific collaborators as described in the spec WITH keyword
 		*/
-		try{
+		//try{
 			var spec = "";
 			//Include the spec document. We need a direct reference to it so that any closures can be called
 			include template="#arguments.specPath#";
@@ -75,7 +75,7 @@ component {
 							  recurseCount=arguments.recurseCount,
 							  with=local.context.with);
 			}
-		} 
+		/*} 
 		catch(any e){
 			writeDump(var="#e#",label="Error encounted while in mockBuilder");		
 			writeDump(var="#arguments#",label="The arguments passed to mockBuilder");
@@ -85,7 +85,7 @@ component {
 				abort;		
 			}
 			abort;
-		}
+		}*/
 		saveStep("End Builder for ''#functionName#', ''#contextName#'",-1);
 		
 		return parent;
@@ -98,8 +98,9 @@ component {
 
 
 	private function doCreateDefaultMocks(required parent, required struct spec)
-	{
-		saveStep("Start doCreateDefaultMocks",1);
+	{		
+		saveStep("Start doCreateDefaultMocks",1,{arguments:arguments});
+
 		if(structKeyExists(arguments.spec,"mockObjects"))
 		{
 			var mocks = arguments.spec.mockObjects;//The objects within the component under test that need to be mocked
@@ -110,8 +111,10 @@ component {
 			for(var mock in mocks)
 			{
 				saveStep("Mock #local.mock#");
+
 				//Override the #mock# object within the component under test with a mock version
 				arguments.parent.MockOverride("#local.mock#");
+
 			}
 			
 		}
@@ -148,14 +151,14 @@ component {
 
 	private function doWithKeyword(required parent, required with, required specPath, required functionName, required contextName)
 	{
-		saveStep("Start doWithKeyword, parent is #getMetaData(parent).fullName#",1);
+		saveStep("Start doWithKeyword, parent is #getMetaData(parent).fullName#",1,{arguments:arguments});
 		var MockedFunctions = arguments.with;
 		
 		
 		//Mock any methods which were requests to be mocked
 		for(var mockFunc in local.mockedFunctions)
 		{
-			saveStep("Start Mock #mockFunc#",1);
+			saveStep("Start Mock #mockFunc#",1,{arguments:arguments});
 
 			//Get the name of the object being mocked
 			var mockObject = listFirst(mockFunc,".");
@@ -221,18 +224,24 @@ component {
 	private function setupFunctionOverrides(required parent)
 	{
 		arguments.parent.mockOverride = function(variableName){
-
+				
+				request.saveStep("Start mockOverride()",1,{this:this,arguments:arguments});
+				
 				//Check if the component is already a mock. If it is, then we can't mock it again because creating a mock
 				//of the mock will just result in an invalid object. This may happen when the component under test is mimicing
 				//One of the other function calls in the spec.
 				var meta = getComponentMetaData(variables[arguments.variableName]);
-				//request.dumpAt(37,variables[arguments.variableName],true,true);	
+				//request.dumpAt(37,variables[arguments.variableName],true,true);
+
+
+
 				if(NOT meta.name contains "cfspec.core.mock")
 				{
-					
+					request.saveStep("Before mock",0,{service:variables[arguments.variableName]});
 					variables[arguments.variableName] = new cfspec.core.mock(variables[arguments.variableName]);
-					
+					request.saveStep("after mock",0,{service:variables[arguments.variableName]});
 				}
+				request.saveStep("End mockOverride()",-1);
 
 		};
 
@@ -263,22 +272,23 @@ component {
 		};
 
 		parent.mockFunction = function(mockObject,specPath,mockFunction,mockValuePath){
-			//writeDump(arguments);
+			request.saveStep("Start mockFunction()",1,{arguments:arguments});
 
 			var spec="";
 			include template="#arguments.specPath#";
 
 			var value = evaluate("spec.#arguments.mockValuePath#")
-			
+			request.saveStep("override mock function",0,{value:value,mockObject:variables[arguments.mockObject]});
 			//Set the mock return value
 			variables[arguments.mockObject].method(arguments.mockFunction).returns(value);
-			request.dumpAt(24,variables[arguments.mockObject],true,true);
+			request.saveStep("override mock function",0,{mockObject:variables[arguments.mockObject]});
+			request.saveStep("end mockFunction()",-1);
 		};
 
 		arguments.parent.mimic = function(required mockObjectName,mockfunctionName,mockContextName){
 			
 			try{
-			request.saveStep("Start mimic mock for #mockObjectName#,#mockFunctionName#,#mockContextName#",1);
+			request.saveStep("Start mimic mock for #mockObjectName#,#mockFunctionName#,#mockContextName#",1,{this:this,arguments:arguments});
 			
 			
 			
@@ -316,17 +326,26 @@ component {
 			};
 
 			request.saveStep("Create subObject #spec.class#");
-			//Call the factory method from the spec to build the object
-			if(structKeyExists(spec,"factory"))
+			//request.saveStep("Before sub object",0,);
+
+			if(structKeyExists(variables[arguments.mockObjectName],"createdInRequest"))
 			{
-				subObject = spec.factory();
+				var subObject = variables[arguments.mockObjectName];
 			}
 			else
 			{
-				//A factory was not defined, so we will create the native object
-				subObject = createObject("component",spec.class);
+				//Call the factory method from the spec to build the object
+				if(structKeyExists(spec,"factory"))
+				{
+					var subObject = spec.factory();
+				}
+				else
+				{
+					//A factory was not defined, so we will create the native object
+					var subObject = createObject("component",spec.class);
+				}
 			}
-			
+			subObject.createdInRequest = true;
 
 			/*
 			I believe this is deprecated and can be deleted. 
@@ -348,7 +367,7 @@ component {
 			subObject.setSpecContext(local.spec,arguments.mockFunctionName,arguments.mockContextName);
 			
 
-			request.saveStep("Start Create finalSubObject for #spec.class#",1);
+			request.saveStep("Start Create finalSubObject for #spec.class#",1,[subObject,specPath,arguments.mockFunctionName,arguments.mockContextName,false,request.recurseCount + 1]);
 			//Create the final subItem by mocking itself. We do this by recursively calling the mockBuilder with each spec
 			finalsubObject = new cfspec.core.spec.mockBuilder(subObject,specPath,arguments.mockFunctionName,arguments.mockContextName,false,request.recurseCount + 1);
 			request.saveStep("End create finalSubObject for #spec.class#",-1);
@@ -466,7 +485,7 @@ component {
 		return arguments.parent;
 	}
 
-	private function saveStep(message,indent=0)
+	private function saveStep(message,indent=0,saveVar)
 	{
 		try{
 			request.totalSteps = request.totalSteps + 1
@@ -482,7 +501,32 @@ component {
 				indentText = indentText & local.indent;
 			}
 
-			request.executionPlan = request.executionPlan & indentText & " #message# -//#request.totalSteps# //#callStackGet()[2].lineNumber#<br />";
+			if(structKeyExists(arguments,"saveVar"))
+			{
+				if(request.previousSaves IS 0)
+				{
+					session.previousSaves = {};
+					request.previousSaves = 1;
+					structInsert(session.previousSaves,request.totalSteps,arguments.saveVar);
+				}
+				else{
+					structInsert(session.previousSaves,request.totalSteps,arguments.saveVar);
+				}
+
+			}
+
+			if(structKeyExists(session.previousSaves,request.totalSteps))
+			{
+				var varlink = "<a target='_blank' href='/tests/cfspec.cfm?step=#request.totalSteps#'>View Args</a>";
+			}
+			else
+			{
+				var varLink = "";
+			}
+
+			request.executionPlan = request.executionPlan & indentText & " #message# -//#request.totalSteps# //#callStackGet()[2].lineNumber# #varLink#<br />";
+
+			
 			
 			if(arguments.indent IS 1)
 			{
@@ -515,6 +559,7 @@ component {
 		param name="request.executionPlan" default="<br />";
 		param name="request.indentCount" default="0";
 		param name="request.totalSteps" default="0";
+		param name="request.previousSaves" default="0";
 	}
 
 	private function dumpAt(step,variable,abortRequest=false,executionPlan=false)
