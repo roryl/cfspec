@@ -35,7 +35,7 @@ component {
 			//Include the spec document. We need a direct reference to it so that any closures can be called
 			include template="#arguments.specPath#";
 			request.recurseCount = arguments.recurseCount;
-			local.parent = setupFunctionOverrides(arguments.parent);
+			local.parent = setupFunctionOverrides(parent=arguments.parent,functionName=arguments.functionName);
 			
 			/* The skipMocks flag is provided for when we are already passing in reference to a component under test. This will occur
 			when the specification describes overriding a function of the component under test. In that situation, the CUT is passed back in
@@ -221,8 +221,24 @@ component {
 		
 	}
 
-	private function setupFunctionOverrides(required parent)
+	private function setupFunctionOverrides(required parent,required functionName)
 	{
+		
+		/*
+		Add a closure to make any private functions public. We will call this for every function call being tested
+		*/
+		arguments.parent.makePublic = function(required functionName){
+			if(structKeyExists(this,arguments.functionName) AND getMetaData(this[arguments.functionName]).access IS "private")
+			{
+				this[arguments.functionName] = variables[arguments.functionName];
+			}
+		}
+		arguments.parent.makePublic(arguments.functionName);
+
+
+		/*
+		Add a closure to allow us to override object dependencies with mock versions of them
+		*/
 		arguments.parent.mockOverride = function(variableName){
 				
 				request.saveStep("Start mockOverride()",1,{this:this,arguments:arguments});
@@ -560,6 +576,7 @@ component {
 		param name="request.indentCount" default="0";
 		param name="request.totalSteps" default="0";
 		param name="request.previousSaves" default="0";
+		param name="session.previousSaves" default="#structNew()#";
 	}
 
 	private function dumpAt(step,variable,abortRequest=false,executionPlan=false)

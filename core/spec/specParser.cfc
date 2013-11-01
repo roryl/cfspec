@@ -22,11 +22,11 @@ component {
 
 		
 		
-		var specFileName = listGetAt(filePath,listLen(filePath,"/"),"/");
-		var componentUnderTestDirectoryPath = replace(filePath,specFileName,"");
+		var specFileName = listGetAt(arguments.filePath,listLen(arguments.filePath,"/"),"/");
+		var componentUnderTestDirectoryPath = replace(arguments.filePath,specFileName,"");
 		var componentUnderTestFileName = replace(specFileName,".spec","");
 				
-		var finalCompileDirectory = outputPath & componentUnderTestDirectoryPath;
+		var finalCompileDirectory = arguments.outputPath & componentUnderTestDirectoryPath;
 		
 		//Create the directory and all directories if they do not exist
 		if(NOT directoryExists(finalCompileDirectory))
@@ -34,9 +34,10 @@ component {
 			directoryCreate(finalCompileDirectory,true);	
 		}
 		
-		finalCompilePath = finalCompileDirectory & "/#componentUnderTestFileName#Tests.cfc";
+		var finalCompilePath = finalCompileDirectory & "/#componentUnderTestFileName#Tests.cfc";
 		
 		variables.specFilePath=arguments.filePath;
+		var spec = "";
 		include template="#variables.specFilePath#";
 		return _parseSpec(spec,finalCompilePath);
 	}
@@ -130,8 +131,9 @@ component {
 
 
 		*/
+		var spec = arguments.specObject;
 		try {
-			savecontent variable="output"{
+			savecontent variable="local.output"{
 
 			o('component extends="mxunit.framework.testCase" {');
 			nl()
@@ -186,23 +188,23 @@ component {
 					
 				}
 					
-				for(name in spec.tests)//For each of the tested functions defined in the specification
+				for(var name in spec.tests)//For each of the tested functions defined in the specification
 				{
 					//IF there was a setup function specified, it was used above. But now we need to delete it as we don't need it for the tests
 					if(structKeyExists(spec.tests[name],"setup"))
 					{
 						//Duplicate the test so that we can delete values without affecting the original
-						func = duplicate(spec.tests[name]);
+						var func = duplicate(spec.tests[name]);
 						//Delete the seutp function which is only going to leave the contexts under test
 						structDelete(func,"setup");
 					}	
 					else{
-						func = spec.tests[name];
+						var func = spec.tests[name];
 					}			
 					
-					for(context in func)//For each of the contexts for this function that we are testing
+					for(var context in func)//For each of the contexts for this function that we are testing
 					{
-						clean = replace(context," ","_","all");//Clean up the name so that we can use it
+						var clean = replace(context," ","_","all");//Clean up the name so that we can use it
 
 						o('public function #name#_#clean#(){');
 						//Function body	
@@ -245,11 +247,11 @@ component {
 						if(structKeyExists(func[context],"given"))
 						{
 
-							args = func[context].given;//The arguments given to the test
+							var args = func[context].given;//The arguments given to the test
 							
 							if(isClosure(args))
 							{
-								args = args();
+								var args = args();
 							}
 							//Set the arguments into the request scope as they can be referenced in asserts and cleanups
 							o('request.given = #serialize(args)#;');
@@ -262,18 +264,13 @@ component {
 						{
 							//Call the method under test
 							o('var testResult = test.#name#();');
-						}
-
-						if(structKeyExists(func[context],"cacheResult") AND func[context].cacheResult IS true){
-							var cacheKey = hash(name & context);
-							o('new cfspec.core.spec.specCache().put("#cacheKey#",testResult)');
 						}					
 						
 						o('//Assert facts based on the specification''s "then" attribute')
 						if(structKeyExists(func[context],"then"))
 						{
-							facts = func[context].then
-							for(fact in facts)
+							var facts = func[context].then
+							for(var fact in facts)
 							{
 								if(fact IS "returns")
 								{
@@ -301,7 +298,7 @@ component {
 								{
 									for(var i=1; i LTE arrayLen(facts[fact]); i=i+1)
 									{
-										test = facts[fact][i];
+										var test = facts[fact][i];
 										if(isStruct(test))
 										{
 											if(isClosure(test.value))
@@ -358,7 +355,7 @@ component {
 
 		//Get the file path by first removing the last element
 		
-		fileWrite(finalCompilePath,output);
+		fileWrite(arguments.compilePath,output);
 		return spec;
 	}
 
@@ -390,43 +387,44 @@ component {
 
 	private function tab(count=1){
 		
-		if(count CONTAINS "+")
+		local.count = arguments.count;
+		if(arguments.count CONTAINS "+")
 		{
-			count = variables.lastTab + replace(count,"+","");
+			local.count = variables.lastTab + replace(count,"+","");
 		}
 
-		if(count CONTAINS "-")
+		if(arguments.count CONTAINS "-")
 		{
-			count = variables.lastTab - replace(count,"-","");
+			local.count = variables.lastTab - replace(count,"-","");
 		}
 
 		var result = "";
-		for(i=1; i LTE count; i = i+1)
+		for(var i=1; i LTE local.count; i = i+1)
 		{
-			result = result & chr(9);
+			local.result = local.result & chr(9);
 		}
-		variables.lastTab = count;
-		return echo(result);
+		variables.lastTab = local.count;
+		return echo(local.result);
 	}
 
 	private function nl(count=1){
 		var result = "";
-		for(i=1; i LTE count; i = i+1)
+		for(var i=1; i LTE arguments.count; i = i+1)
 		{
-			result = result & chr(10);
+			local.result = local.result & chr(10);
 		}
-		return echo(result);
+		return echo(local.result);
 	}
 
 	private function ln(text){
-		return echo("//#text# #chr(10)#");
+		return echo("//#arguments.text# #chr(10)#");
 	}
 
 	private function o(string)
 	{
 		
 		//Remove all Tabs
-		output = replaceNoCase(string,chr(9),"","all");
+		local.output = replaceNoCase(arguments.string,chr(9),"","all");
 		//Remove all new lines
 		//output = replaceNoCase(output,chr(10),"","all");
 		//Remove all Windows new lines
@@ -434,14 +432,14 @@ component {
 		
 		nl();
 		tab(variables.lastTab);
-		lineNumber = callStackGet()[2].lineNumber;
+		local.lineNumber = callStackGet()[2].lineNumber;
 		//writeDump(callStackGet());
 		//abort;
 		if(variables.debugging)
 		{
-			output = output & " //#lineNumber#";
+			local.output = local.output & " //#local.lineNumber#";
 		}
-		return echo(output);
+		return echo(local.output);
 	}
 
 	
