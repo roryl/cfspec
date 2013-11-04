@@ -19,7 +19,7 @@ component {
 		request.saveStep = this.saveStep;
 		request.indent = this.indent;
 		request.dumpAt = this.dumpAt;
-		saveStep("start Builder for ''#functionName#', ''#contextName#'",1);
+		saveStep("start Builder for ''#arguments.functionName#', ''#arguments.contextName#'",1);
 		/*
 		TASKS -
 			This function will be given component undertest, the specification and the context path that we are on. 
@@ -86,7 +86,7 @@ component {
 			}
 			abort;
 		}*/
-		saveStep("End Builder for ''#functionName#', ''#contextName#'",-1);
+		saveStep("End Builder for ''#arguments.functionName#', ''#arguments.contextName#'",-1);
 		
 		return parent;
 	}
@@ -419,7 +419,7 @@ component {
 				else if(structKeyExists(this,"onMissingMethod")){
 					result = evaluate("this._onMissingMethod(argumentCollection=arguments)");
 				}
-
+				
 				if(structKeyExists(variables.specContext.context,"then"))
 				{	
 					if(structKeyExists(variables.specContext.context.then,"returns"))
@@ -450,7 +450,8 @@ component {
 
 						if(resultType IS NOT returnType)
 						{
-							throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
+							var collaboratorClass = getMetaData(this).fullname;
+							throw(message="The collaborator return value from #local.collaboratorClass# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
 						}
 														
 					}
@@ -473,7 +474,9 @@ component {
 									{
 										local.message = assert[i].message;
 									}
-									throw(message="The collaborator assertion from #variables.spec.class# failed. The message was:#local.message#");
+									var collaboratorClass = getMetaData(this).fullname;
+									
+									throw(message="The collaborator assertion from #local.collaboratorClass# failed. The message was:#local.message#");
 								}
 							}
 						}
@@ -512,7 +515,7 @@ component {
 			}
 
 			var indentText = "";
-			for(i=1; i LTE request.indentCount; i =i+1)
+			for(var i=1; i LTE request.indentCount; i =i+1)
 			{
 				indentText = indentText & local.indent;
 			}
@@ -540,7 +543,7 @@ component {
 				var varLink = "";
 			}
 
-			request.executionPlan = request.executionPlan & indentText & " #message# -//#request.totalSteps# //#callStackGet()[2].lineNumber# #varLink#<br />";
+			request.executionPlan = request.executionPlan & indentText & " #arguments.message# -//#request.totalSteps# //#callStackGet()[2].lineNumber# #varLink#<br />";
 
 			
 			

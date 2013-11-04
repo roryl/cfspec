@@ -10,6 +10,11 @@ component {
 
 	public function init(required variable){
 
+		//Object needs to come before struct because objects will evaluate to structs also
+		if(isObject(arguments.variable))
+		{
+			return "object";
+		}
 		if(isStruct(arguments.variable))
 		{
 			return "struct";
@@ -22,10 +27,7 @@ component {
 		{
 			return "numeric";
 		}
-		if(isObject(arguments.variable))
-		{
-			return "object";
-		}
+		
 		if(isBoolean(arguments.variable))
 		{
 			return "boolean";

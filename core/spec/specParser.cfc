@@ -229,8 +229,17 @@ component {
 						}
 						else
 						{
-							o('//Create the object that needs to be called')
-							o('var test = new #spec.class#()')
+							if(name IS "init") //Functions that we are testing with the name init, need to be created with createObject or the init() will be called prematurely
+							{
+								o('//Create the object that needs to be called')
+								o('var test = createObject("#spec.class#")')
+							}
+							else
+							{
+								o('//Create the object that needs to be called')
+								o('var test = new #spec.class#()')
+							}
+							
 						}
 						
 						o('//Set the portion of the spec under test into the the test object so that we can use any values within the spec within the scope of the component under test')
