@@ -410,13 +410,23 @@ component {
 			//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
 			finalSubObject["#mockFunctionName#"] = function(){
 
-				request.given = arguments;
+
+				if(structKeyExists(variables.specContext.context,"before") AND isClosure(variables.specContext.context.before))
+				{
+					variables.specContext.context.before();
+				}
+
+				
+				
 				if(structKeyExists(this,"#variables.specContext.functionName#"))
 				{
+					request.given = arguments;
 					result = evaluate("this._#variables.specContext.functionName#(argumentCollection=arguments)");
 					
 				}
 				else if(structKeyExists(this,"onMissingMethod")){
+					
+					request.given = arguments.2;
 					result = evaluate("this._onMissingMethod(argumentCollection=arguments)");
 				}
 				
@@ -480,8 +490,14 @@ component {
 								}
 							}
 						}
-					}
+					}					
 				}
+
+				if(structKeyExists(variables.specContext.context,"after") AND isClosure(variables.specContext.context.after))
+				{
+					variables.specContext.context.after();
+				}
+
 				if(isDefined("result"))
 				{
 					return result;

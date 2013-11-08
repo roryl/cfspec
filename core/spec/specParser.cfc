@@ -253,21 +253,32 @@ component {
 						o('//Pass the component under test to the mockBuilder. The mock builder will mock out state and dependencies as described by the spec')
 						o('test = new cfspec.core.spec.mockBuilder(test,"#variables.specFilePath#","#name#","#context#")')
 
+						if(structKeyExists(func[context],"before") AND isClosure(func[context].before))
+						{
+							o('//Call the before function that was specified')
+							o('variables.spec.tests["#name#"]["#context#"].before()')
+						}
+
 						if(structKeyExists(func[context],"given"))
 						{
 
 							var args = func[context].given;//The arguments given to the test
-							
+
 							if(isClosure(args))
 							{
-								var args = args();
+								//Set the arguments into the request scope as they can be referenced in asserts and cleanups
+								o('request.given = variables.spec.tests["#name#"]["#context#"].given();');
 							}
-							//Set the arguments into the request scope as they can be referenced in asserts and cleanups
-							o('request.given = #serialize(args)#;');
-							//Serialize any arguments which are intended
-							o('coll = #serialize(args)#;');
+							else
+							{
+
+								//Set the arguments into the request scope as they can be referenced in asserts and cleanups
+								o('request.given = variables.spec.tests["#name#"]["#context#"].given;');
+								//Serialize any arguments which are intended
+							}
+							
 							//Call the method under test passing in the variables
-							o('var testResult = test.#name#(argumentCollection=coll);');
+							o('var testResult = test.#name#(argumentCollection=request.given);');
 						}
 						else
 						{
@@ -337,6 +348,12 @@ component {
 									}
 								}
 							}
+						}
+
+						if(structKeyExists(func[context],"after") AND isClosure(func[context].after))
+						{
+							o('//Call the after function that was specified')
+							o('variables.spec.tests["#name#"]["#context#"].after()')
 						}
 						
 
