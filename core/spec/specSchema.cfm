@@ -36,21 +36,40 @@ schema = {
 			description:"Defines the functions that are going to be tested for this specification",
 			types:"struct",
 			required:true,
-			example:'spec = {tests:{functionNameOne:{...},functionNameTwo:{...}}}',
+			example:'spec = {tests:{loginUser:{...},sendUserSignup:{...}}}',
 			children:[
 				{
 					title:"[The name of the function being tested]",
 					description:"The name of the function under test",
 					types:"struct",
 					required:false,
-					example:"spec = {tests:{functionNameOne:{//function scenarios}}",
+					example:"spec = {tests:{loginUser:{//function scenarios}}",
 					children:[
 						{
 							title:"[The scenario being run on the function]",
 							description:"The context or scenario of the functional test. A function may have multiple code execution paths or return a different value depending on state. One defines all of the scenarios that the function operates under.",
 							types:"struct",
 							required:false,
-							example:'spec = {tests:{functionNameOne:{"Should return true when user is logged in":{//Scenario settings},"Should return true when user is logged in":{//Scenario settings}}}',
+							example:'spec = {tests:{loginUser:{"Should return true when user is logged in":{//Scenario settings},"Should return false when user is logged out":{//Scenario settings}}}',
+							children:[
+								{
+									title:"given",
+									description:"These are the parameters/Arguments that are going to be passed into the function (thus 'Given' to the function). They are passed as an argument collection. The key values should be
+												 The argument names",
+									types:"struct,function",
+									required:false,
+									example:'spec = {tests:{loginUser:{"Should return true when user is logged in":{given:{userName="validUser",password="gkeith374"}}}}',
+								},
+								{
+									title:"when",
+									description:"These are the variables that represent the 'State' of the object under test for a given scenario. The values specified here will be copied into the respective variables Usually this will be values in the variables scope, but sometimes values in the request, session, and application scopes may need to exist",
+									types:"struct",
+									required:false,
+									example:'spec = {tests:{loginUser:{"Should return true when user is logged in":when:{"application.allowLogin":true,"request.someVariable":"value"}}}}',
+								}
+							]
+
+							
 							/*children:{
 								given:{
 									description:"These are the parameters/Arguments that are going to be passed into the function. They are passed as an argument collection. The key values should be
