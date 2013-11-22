@@ -275,6 +275,7 @@ component {
 			//Set the value of the variableName passed in with the value obtained from the spec
 			if(isStruct(value))
 			{
+				evaluate("#variableName# = {}");
 				for(key in value)
 				{
 					evaluate("structInsert(#variableName#,key,value[key],true)");	
