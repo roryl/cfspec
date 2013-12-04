@@ -375,7 +375,7 @@ component {
 			//Set the spec into the object as we need to pass in these values so that we can use them when proxying to the real function call
 			subObject.setSpecContext = function(spec,mockFunctionName,mockContextName){
 				//writeDump(var=arguments,label="setSpecContext #request.dumpc#");
-				variables.specContext = {
+				variables.specContext[arguments.mockFunctionName] = {
 					functionName:arguments.mockFunctionName,
 					contextName:arguments.mockContextName,
 					context:spec.tests[mockfunctionName]["#mockContextName#"]
@@ -400,7 +400,8 @@ component {
 			{
 				//In order to create a proxy to the real method call, we need to first copy the real method to a proxy method
 				finalSubObject["_#mockFunctionName#"] = finalSubObject[mockFunctionName];
-
+				//Then we need to delete the real method because we need to use onMissingMethod to tell what function is being called at runtime
+				structDelete(finalSubObject,mockFunctionName);
 			}
 			else if(structKeyExists(finalSubObject,"onMissingMethod"))
 			{
@@ -408,21 +409,23 @@ component {
 					finalSubObject["_onMissingMethod"] = finalSubObject["onMissingMethod"];
 					mockFunctionName = "onMissingMethod";
 			}
+			
 			//Now we can override the real method as a proxy, and call our former copy. This allows us to check the return value that it matches the spec
-			finalSubObject["#mockFunctionName#"] = function(){
+			finalSubObject.onMissingMethod = function(missingMethodName,missingMethodArguments){
 
-
-				if(structKeyExists(variables.specContext.context,"before") AND isClosure(variables.specContext.context.before))
+				
+				var activeContext = variables.specContext[missingMethodName];
+				if(structKeyExists(local.activeContext.context,"before") AND isClosure(local.activeContext.context.before))
 				{
-					variables.specContext.context.before();
+					local.activeContext.context.before();
 				}
 
 				
 				
-				if(structKeyExists(this,"#variables.specContext.functionName#"))
+				if(structKeyExists(this,"_#local.activeContext.functionName#"))
 				{
-					request.given = arguments;
-					result = evaluate("this._#variables.specContext.functionName#(argumentCollection=arguments)");
+					request.given = arguments.missingMethodArguments;					
+						result = evaluate("this._#local.activeContext.functionName#(argumentCollection=arguments.missingMethodArguments)");		
 					
 				}
 				else if(structKeyExists(this,"onMissingMethod")){
@@ -431,18 +434,18 @@ component {
 					result = evaluate("this._onMissingMethod(argumentCollection=arguments)");
 				}
 				
-				if(structKeyExists(variables.specContext.context,"then"))
+				if(structKeyExists(local.activeContext.context,"then"))
 				{	
-					if(structKeyExists(variables.specContext.context.then,"returns"))
+					if(structKeyExists(local.activeContext.context.then,"returns"))
 					{							
 						
-						returnType = variables.specContext.context.then.returns;
+						returnType = local.activeContext.context.then.returns;
 						
 						if(returnType IS "void")
 						{
 							if(isDefined('result'))
 							{
-								throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned a value. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
+								throw(message="The collaborator return value from #variables.spec.class# did not match its specification. It should have returned #local.activeContext.context.then.returns# but returned a value. The tested specification was: #local.activeContext.functionName# #local.activeContext.contextName#");
 							}
 							else
 							{
@@ -462,14 +465,14 @@ component {
 						if(resultType IS NOT returnType)
 						{
 							var collaboratorClass = getMetaData(this).fullname;
-							throw(message="The collaborator return value from #local.collaboratorClass# did not match its specification. It should have returned #variables.specContext.context.then.returns# but returned #resultType#. The tested specification was: #variables.specContext.functionName# #variables.specContext.contextName#");
+							throw(message="The collaborator return value from #local.collaboratorClass# did not match its specification. It should have returned #local.activeContext.context.then.returns# but returned #resultType#. The tested specification was: #local.activeContext.functionName# #local.activeContext.contextName#");
 						}
 														
 					}
-					if(structKeyExists(variables.specContext.context.then,"assert"))
+					if(structKeyExists(local.activeContext.context.then,"assert"))
 					{
 
-						var assert = variables.specContext.context.then.assert;
+						var assert = local.activeContext.context.then.assert;
 						
 						for(var i=1; i LTE arrayLen(assert); i =i+1)
 						{
@@ -494,9 +497,9 @@ component {
 					}					
 				}
 
-				if(structKeyExists(variables.specContext.context,"after") AND isClosure(variables.specContext.context.after))
+				if(structKeyExists(local.activeContext.context,"after") AND isClosure(local.activeContext.context.after))
 				{
-					variables.specContext.context.after();
+					local.activeContext.context.after();
 				}
 
 				if(isDefined("result"))
