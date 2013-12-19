@@ -36,22 +36,29 @@ schema = {
 			description:"Defines the functions that are going to be tested for this specification",
 			types:"struct",
 			required:true,
-			example:'spec = {tests:{loginUser:{...},sendUserSignup:{...}}}',
+			example:'spec = {tests:{//Children}}',
 			children:[
 				{
 					title:"[The name of the function being tested]",
 					description:"The name of the function under test",
 					types:"struct",
 					required:false,
-					example:"spec = {tests:{loginUser:{//function scenarios}}",
+					example:"loginUser:{//Children}",
 					children:[
 						{
 							title:"[The scenario being run on the function]",
 							description:"The context or scenario of the functional test. A function may have multiple code execution paths or return a different value depending on state. One defines all of the scenarios that the function operates under.",
 							types:"struct",
 							required:false,
-							example:'spec = {tests:{loginUser:{"Should return true when user is logged in":{//Scenario settings},"Should return false when user is logged out":{//Scenario settings}}}',
+							example:'"Should return false when user is logged out":{//Children}',
 							children:[
+								{
+									title:"before",
+									description:"This is a closure which can be called to setup information that is not actually apart of the test like inserting fake records into a database. This is a setup for the scenario",
+									types:"function",
+									required:false,
+									example:'before:function(){//Setup the test with some other conditions}'
+								},
 								{
 									title:"given",
 									description:"These are the parameters/Arguments that are going to be passed into the function (thus 'Given' to the function). They are passed as an argument collection. The key values should be
@@ -62,11 +69,27 @@ schema = {
 								},
 								{
 									title:"when",
-									description:"These are the variables that represent the 'State' of the object under test for a given scenario. The values specified here will be copied into the respective variables Usually this will be values in the variables scope, but sometimes values in the request, session, and application scopes may need to exist",
+									description:"These are the variables that represent the 'State' of the object under test for a given scenario. The values specified here will be copied into the respective variables. Usually this will be values in the variables scope, but sometimes values in the request, session, and application scopes may need to exist",
 									types:"struct",
 									required:false,
-									example:'spec = {tests:{loginUser:{"Should return true when user is logged in":when:{"application.allowLogin":true,"request.someVariable":"value"}}}}',
-								}
+									example:'spec = {tests:{loginUser:{"Should return true when user is logged in":{when:{//When children}}}}}',
+									children:[
+										{
+											title:"[The scoped variable being created]",
+											description:"This is a structure with the key being the variable being mocked, and the value being what will be placed into the variable",
+											types:"simpleValue,struct",
+											required:true,
+											example:'spec = {tests:{loginUser:{"Should return true when user is logged in":{when:{"application.allowLogin":true,"request.someVariable":"value",request.someStruct:{key:value,key1:value1}}}}}}',
+										}
+									]
+								},
+								{
+									title:"after",
+									description:"This is a closure which can be called to cleanup information after the test, like deleting database information. This is a teardown.",
+									types:"function",
+									required:false,
+									example:'after:function(){//Setup the test with some other conditions}'
+								},
 							]
 
 							

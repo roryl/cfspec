@@ -1,5 +1,6 @@
-
 <cfscript>
+
+import "cfspec.libraries.querystring.querystring";
 /**
  * Formats a JSON string with indents &amp; new lines.
  * v1.0 by Ben Koshy
@@ -47,12 +48,13 @@ public string function formatJSON(str) {
             }
         }
     }
-    
+   	
     return fjson;
 }
 </cfscript>
 
 <cfinclude template="/cfspec/core/spec/specSchema.cfm">
+
 <style>
  .panel {
  	text-align:left;
@@ -60,9 +62,43 @@ public string function formatJSON(str) {
 </style>
 <cfset variables.i = 0>
 <cfparam name="url.entryNode" default="">
+
+<cffunction name="buildExample" output="false">
+	<cfargument name="lastNode">
+	<cfscript>
+		local.nodeList = arguments.lastNode
+		//Starting from the last node, add the example to the previous example
+		previousExample = "";
+		finalExample = "";
+		for(var i = listLen(local.nodeList,"."); i GTE 1; i=i-1)
+		{
+			//writeDump(local.nodeList);
+			//writeDump(i);
+			evaluate("currentExample = variables.schema.children#local.nodeList#.example");
+			//writeDump(currentExample);
+			finalExample = replaceNoCase(currentExample,"//Children",previousExample);
+			//writeDump(finalExample);
+			previousExample = finalExample;
+			local.nodeList = listDeleteAt(local.nodeList,listLen(local.nodeList,"."),".");
+			
+			
+			
+
+
+			
+		}
+		//writeDump(arguments.lastNode);
+		
+
+		//evaluate("writeDump(variables.schema.children#arguments.lastNode#)");
+		return trim(finalExample);
+	</cfscript>		
+</cffunction>
+
 <cffunction name="drawNodes" output="true">
 	<cfargument name="schema">
 	<cfargument name="entryNode">
+	<cfset querystring = new queryString(CGI.QUERY_STRING)>
 	<cfsavecontent variable="html">
 	
 	<cfif NOT isArray(arguments.schema)>
@@ -76,7 +112,17 @@ public string function formatJSON(str) {
 			local.example = arguments.schema[key].example;
 			local.hasChildren = structKeyExists(arguments.schema[key],"children");
 			local.isRequired = ((structKeyExists(arguments.schema[key],"required") AND arguments.schema[key].required IS True)?true :false);
-			local.entryNode = arguments.entryNode & "[#key#]";
+			
+			if(structKeyExists(request,"isFirstEntryNode"))
+			{
+				local.entryNode = arguments.entryNode & "[#key#]";
+			}
+			else
+			{
+				local.entryNode = arguments.entryNode;
+			}
+			request.isFirstEntryNode = true;
+			
 			
 		</cfscript>
 
@@ -94,7 +140,7 @@ public string function formatJSON(str) {
 			        <cfelse>
 			        	<i>(optional)</i>
 			        </cfif>
-			        <a href="/?#CGI.query_String#&entryNode=#local.entryNode#" style="float:right;">Goto Node</a>
+			        <a href="/#queryString.setValue("entryNode",local.entryNode).get()#" style="float:right;">Goto Node</a>
 			      </h4>
 			    </div>
 			    <div id="collapse#i#" class="panel-collapse collapse">
@@ -102,8 +148,11 @@ public string function formatJSON(str) {
 			         <ul>
 			         	<li><strong>Description:</strong> #local.description#</li>
 			         	<li><strong>Data Types:</strong> #local.Types#</li>
-			         	<li><strong>Example:</strong><pre style="margin-top:15px">#formatJson(local.example)#</pre></li>
-			        
+			         	<li><strong>Example:</strong><br />
+			         	snippet | full
+			         	<pre style="margin-top:15px">#formatJson(local.example)#</pre></li>
+			         	<pre style="margin-top:15px">#formatJson(buildExample(local.entryNode))#</pre></li>
+			        	
 			         <cfif local.hasChildren>
 			         	<li><strong>Has Children:</strong>
 			         	<cfset drawNodes(arguments.schema[key].children,"#local.entryNode#.children")>
