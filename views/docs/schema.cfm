@@ -79,13 +79,7 @@ public string function formatJSON(str) {
 			finalExample = replaceNoCase(currentExample,"//Children",previousExample);
 			//writeDump(finalExample);
 			previousExample = finalExample;
-			local.nodeList = listDeleteAt(local.nodeList,listLen(local.nodeList,"."),".");
-			
-			
-			
-
-
-			
+			local.nodeList = listDeleteAt(local.nodeList,listLen(local.nodeList,"."),".");			
 		}
 		//writeDump(arguments.lastNode);
 		
