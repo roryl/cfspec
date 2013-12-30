@@ -59,6 +59,7 @@ component {
 			catch(any e)
 			{
 				writeDump(e);
+				abort;
 			}
 			
 		}
@@ -299,7 +300,20 @@ component {
 									{
 										o('assert(NOT isDefined("testResult"),"Result returned a value but the specification expected to return void")')
 									}
-									else if(facts[fact] CONTAINS "is")
+									else if(facts[fact] CONTAINS "isString" 
+														OR facts[fact] CONTAINS "isStruct"
+														OR facts[fact] CONTAINS "isArray"
+														OR facts[fact] CONTAINS "isNumeric"
+														OR facts[fact] CONTAINS "isBoolean"
+														OR facts[fact] CONTAINS "isDate"
+														OR facts[fact] CONTAINS "isQuery"
+														OR facts[fact] CONTAINS "isJson"
+														OR facts[fact] CONTAINS "isXml"
+														OR facts[fact] CONTAINS "isBinary"
+														OR facts[fact] CONTAINS "isClosure"
+														OR facts[fact] CONTAINS "isCustomFunction"
+														OR facts[fact] CONTAINS "isImage"
+														)
 									{
 										var compareType = replace(facts[fact],"is","");
 										var type = serialize(createObject("component","getType"));

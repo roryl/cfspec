@@ -24,11 +24,12 @@ component output="false" hint="Example FW/1 controller."{
 			if(rc.compilePath IS NOT ""){
 				if(NOT directoryExists(rc.compilePath))
 				{
-					throw('the compile path directory specified #rc.compilePath# does not exist');
+					//throw('the compile path directory specified #rc.compilePath# does not exist');
 				}
 			}
 
-			
+			//Do the compile
+			rc.FinishedSpecs = new cfspec.core.spec.specParser().parseAllSpecs(rc.specPath,rc.compilePath);			
 		}
 	}
 	

@@ -65,29 +65,38 @@ public string function formatJSON(str) {
 
 <cffunction name="buildExample" output="false">
 	<cfargument name="lastNode">
+	<cfargument name="exampleIndex" default="1">
 	<cfscript>
 		local.nodeList = arguments.lastNode
+		local.exampleIndex = arguments.exampleIndex;
 		//Starting from the last node, add the example to the previous example
 		previousExample = "";
 		finalExample = "";
+		
+		//If it is the first time this function is called, the node list will be empty, so we set it to the first array 
+		//from the spec
+		if(local.nodeList IS "")
+		{
+			local.nodeList = "[1]";
+		}
+
 		for(var i = listLen(local.nodeList,"."); i GTE 1; i=i-1)
 		{
 			//writeDump(local.nodeList);
 			//writeDump(i);
-			evaluate("currentExample = variables.schema.children#local.nodeList#.example");
+			evaluate("currentExample = variables.schema.children#local.nodeList#.example[#local.exampleIndex#].code");
 			//writeDump(currentExample);
 			finalExample = replaceNoCase(currentExample,"//Children",previousExample);
 			//writeDump(finalExample);
 			previousExample = finalExample;
 			local.nodeList = listDeleteAt(local.nodeList,listLen(local.nodeList,"."),".");
-			
-			
-			
-
-
-			
+			//Set the exampleIndex back to 1 because we only want this to apply to the first example. All 
+			//parent examples should always use the first
+			local.exampleIndex = 1;
 		}
-		//writeDump(arguments.lastNode);
+		//Root example
+		rootExample = "spec = {//Children}";
+		finalExample = replaceNoCase(rootExample,"//Children",finalExample);
 		
 
 		//evaluate("writeDump(variables.schema.children#arguments.lastNode#)");
@@ -148,10 +157,16 @@ public string function formatJSON(str) {
 			         <ul>
 			         	<li><strong>Description:</strong> #local.description#</li>
 			         	<li><strong>Data Types:</strong> #local.Types#</li>
-			         	<li><strong>Example:</strong><br />
-			         	snippet | full
-			         	<pre style="margin-top:15px">#formatJson(local.example)#</pre></li>
-			         	<pre style="margin-top:15px">#formatJson(buildExample(local.entryNode))#</pre></li>
+			         	<li><strong>Examples:</strong><br />
+			         	<cfloop from="1" to="#arrayLen(local.example)#" index="index2">
+			         		<cfset local.exampleCode = local.example[index2].code>
+			         		
+			         		<pre style="margin-top:15px">#formatJson(local.exampleCode)#</pre></li>
+				         	<pre id="full#key##index2#"style="margin-top:15px; display:none">#formatJson(buildExample(local.entryNode,index2))#</pre>
+							<a href="Javascript:$('##full#key##index2#').toggle();">Show/Hide Full Example</a>
+			         	</cfloop>
+			         	
+			         	</li>
 			        	
 			         <cfif local.hasChildren>
 			         	<li><strong>Has Children:</strong>
