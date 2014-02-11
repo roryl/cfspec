@@ -556,7 +556,7 @@ component {
 
 			if(structKeyExists(session.previousSaves,request.totalSteps))
 			{
-				var varlink = "<a target='_blank' href='/tests/cfspec.cfm?step=#request.totalSteps#'>View Args</a>";
+				var varlink = "<a target='_blank' href='?action=main.showsteps&step=#request.totalSteps#'>View Args</a>";
 			}
 			else
 			{

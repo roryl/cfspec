@@ -48,6 +48,13 @@ schema = {
 					example:[{code:"loginUser:{//Children}"}],
 					children:[
 						{
+							title:"Setup",
+							description:"A function to call to setup all scenarios under this test. It will be called once per scenario",
+							types:"function",
+							required:false,
+							example:[{code:'setup:function(){//Setup code for each scneario under test}'}]
+						},
+						{
 							title:"[The scenario being run on the function]",
 							description:"The context or scenario of the functional test. A function may have multiple code execution paths or return a different value depending on state. One defines all of the scenarios that the function operates under.",
 							types:"struct",

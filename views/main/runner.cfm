@@ -1,7 +1,7 @@
 Affiliates Test Suite
 <cfscript>
 setting requestTimeout="6000";
-param name="url.dir" default="/cfspec/tests/affiliates";
+param name="url.dir" default="/cfspec/tests/cfspec";
 application.settings.testrunnerMappingPath = "/var/www";
 
 function getTestFiles(required mapping,required root,required filter){

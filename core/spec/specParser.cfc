@@ -19,9 +19,6 @@ component {
 
 	public function parseSpec(required filePath, outputPath)
 	{
-
-		
-		
 		var specFileName = listGetAt(arguments.filePath,listLen(arguments.filePath,"/"),"/");
 		var componentUnderTestDirectoryPath = replace(arguments.filePath,specFileName,"");
 		var componentUnderTestFileName = replace(specFileName,".spec","");
@@ -298,7 +295,7 @@ component {
 						o('test.setSpec(variables.spec.tests.#name#["#context#"]);')
 
 						o('//Pass the component under test to the mockBuilder. The mock builder will mock out state and dependencies as described by the spec')
-						o('test = new cfspec.core.spec.mockBuilder(test,"#variables.specFilePath#","#name#","#context#")')
+						o('test = new cfspec.core.spec.mockBuilderNew(test,"#variables.specFilePath#","#name#","#context#")')
 
 						if(structKeyExists(func[context],"before") AND isClosure(func[context].before))
 						{
@@ -359,6 +356,7 @@ component {
 														OR facts[fact] CONTAINS "isClosure"
 														OR facts[fact] CONTAINS "isCustomFunction"
 														OR facts[fact] CONTAINS "isImage"
+														OR facts[fact] CONTAINS "isObject"
 														)
 									{
 										var compareType = replace(facts[fact],"is","");
@@ -366,6 +364,10 @@ component {
 										o('var getType = evaluate("#type#")')
 										o('var type = getType.init(testResult)')
 										o('assert(type IS "#compareType#","The result from the function call #name# was of type ##type## but the specification expected to return a #compareType#")')	
+									}
+									else if(facts[fact] CONTAINS "isNotDefined")
+									{
+										o('assert(NOT isDefined("testResult"))');
 									}
 									else
 									{
