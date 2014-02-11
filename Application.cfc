@@ -3,6 +3,10 @@ component extends="/framework" output="false"
 	this.name="cfspec";
 	
 	this.mappings["/cfspec"] = getDirectoryFromPath(getBaseTemplatePath());
+	this.mappings["/affiliates"] = "/var/www/affiliates";
+	this.mappings["/mxunit"] = getDirectoryFromPath(getBaseTemplatePath()) & "libraries/mxunit";
+
+
 	/*framework defaults (as struct literal):
 	variables.framework = {
 		// the name of the URL variable:

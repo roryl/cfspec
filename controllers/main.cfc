@@ -1,4 +1,4 @@
-component output="false" hint="Example FW/1 controller."{
+component output="true" hint="Example FW/1 controller."{
 
 
 	
@@ -30,6 +30,17 @@ component output="false" hint="Example FW/1 controller."{
 
 			//Do the compile
 			rc.FinishedSpecs = new cfspec.core.spec.specParser().parseAllSpecs(rc.specPath,rc.compilePath);			
+		}
+	}
+
+	public function compile()
+	{
+		param name="rc.compilePath" default="";
+		param name="rc.outputPath" default="";
+
+		if(structKeyExists(rc,"submit"))
+		{
+			rc.spec = new cfspec.core.spec.specParser().parseAllSpecs(rc.compilePath,rc.outputPath);
 		}
 	}
 	

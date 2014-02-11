@@ -149,7 +149,18 @@ public string function formatJSON(str) {
 			        <cfelse>
 			        	<i>(optional)</i>
 			        </cfif>
-			        <a href="/#queryString.setValue("entryNode",local.entryNode).get()#" style="float:right;">Goto Node</a>
+			        
+
+			        <cfif listLen(local.entryNode,".") GT 0>
+			        	<cfset local.parentNode = listDeleteAt(local.entryNode,listLen(local.entryNode,"."),".")>
+			        <cfelse>
+			        	<cfset local.parentNode = local.entryNode>
+			        </cfif>
+			        
+			        <div style="float:right;">
+			        <a href="/#queryString.setValue("entryNode",local.parentNode).get()#"><span class="glyphicon glyphicon-circle-arrow-left"></span></a> 
+			        <a href="/#queryString.setValue("entryNode",local.entryNode).get()#">Goto Node</a>
+			        </div>
 			      </h4>
 			    </div>
 			    <div id="collapse#i#" class="panel-collapse collapse">
@@ -158,14 +169,34 @@ public string function formatJSON(str) {
 			         	<li><strong>Description:</strong> #local.description#</li>
 			         	<li><strong>Data Types:</strong> #local.Types#</li>
 			         	<li><strong>Examples:</strong><br />
-			         	<cfloop from="1" to="#arrayLen(local.example)#" index="index2">
-			         		<cfset local.exampleCode = local.example[index2].code>
-			         		
-			         		<pre style="margin-top:15px">#formatJson(local.exampleCode)#</pre></li>
-				         	<pre id="full#key##index2#"style="margin-top:15px; display:none">#formatJson(buildExample(local.entryNode,index2))#</pre>
-							<a href="Javascript:$('##full#key##index2#').toggle();">Show/Hide Full Example</a>
-			         	</cfloop>
-			         	
+			       		<cftry>
+				       		<div style="padding-left:15px;">
+					         	<cfloop from="1" to="#arrayLen(local.example)#" index="index2">
+					         		<cfset workingExample = local.example[index2]>
+					         		<cfset local.exampleCode = workingExample.code>
+					         		<div style="margin-top:10px;"><strong>Example #index2#</strong>
+						         		<cfif structKeyExists(workingExample,"title")>
+						         		:#workingExample.title#
+						         		</cfif>
+						         		<cfif structKeyExists(workingExample,"type")>
+						         		using the type of <i>#workingExample.type#</i>
+						         		</cfif>
+					         		</div>
+					         		<cfif structKeyExists(workingExample,"description")>
+						         	<div><b>Description:</b> #workingExample.description#</div>
+						         		
+						         	</cfif>
+					         		
+					         		<pre style="margin-top:15px">#formatJson(local.exampleCode)#</pre>
+					         		<cfset exampleId = createUUID()>
+						         	<pre id="full#exampleId#"style="margin-top:15px; display:none">#formatJson(buildExample(local.entryNode,index2))#</pre>
+									<a href="Javascript:$('##full#exampleId#').toggle();">Show/Hide Full Example</a>
+					         	</cfloop>
+					         	<cfcatch type="any">
+					       				<cfdump var="#local.example#" abort="true">
+					       			</cfcatch>
+					       		</cftry>
+				       		</div>
 			         	</li>
 			        	
 			         <cfif local.hasChildren>

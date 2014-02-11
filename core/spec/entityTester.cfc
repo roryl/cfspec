@@ -8,8 +8,8 @@
 
 component {
 
-	public function init(componentPath){
-		variables.metaData = getComponentMetaData(arguments.componentPath);
+	public function init(entity){
+		variables.metaData = getComponentMetaData(entityNew(arguments.entity));
 		return this;
 	}
 
@@ -25,6 +25,20 @@ component {
 
 		}
 		return simpleProps;
+	}
+
+	public function getRelationships()
+	{
+		local.properties = variables.metaData.properties;
+		local.relationships = [];
+		for(local.prop in local.properties)
+		{
+			if(structKeyExists(local.prop,"fieldtype") AND local.prop.fieldtype IS NOT "id")
+			{
+				arrayAppend(local.relationships,local.prop);
+			}
+		}
+		return relationships;
 	}
 
 	public function getEntityName(){

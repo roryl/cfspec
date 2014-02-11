@@ -5,7 +5,9 @@ schema = {
 		{
 			title:"class",
 			description:"A fully qualified path to the component being specified",
-			example:'class:"a.fully.qualified.path"',
+			example:[
+				{code:'class:"a.fully.qualified.path"'}
+			],
 			types:"string",
 			required=true
 		},
@@ -66,8 +68,8 @@ schema = {
 									types:"struct,function",
 									required:false,
 									example:[
-										{code:'given:{userName="validUser",password="gkeith374"}'},
-										{code:'given:function(){return {userName="validUser",password="gkeith374"};}'}
+										{code:'given:{userName="validUser",password="gkeith374"}',type:"struct",description:"Given should be a structure with the keys being the argument names."},
+										{code:'given:function(){return {userName="validUser",password="gkeith374"};}',type:"function",description:"If defining given as a function, the return value must be a structure with the keys being the argument names to pass and the values being the argument values"}
 									],
 								},
 								{

@@ -44,12 +44,11 @@ component {
 
 	public function parseAllSpecs(required specDirectory, required outputPath)
 	{
-		
+
 		if(structKeyExists(url,"reloadFiles") OR NOT structKeyExists(application,"specFiles"))
 		{
 			application.specFiles = getSpecFiles(arguments.specDirectory,"*.spec");	
 		}
-		
 
 		for(var file in application.specFiles)
 		{
@@ -136,7 +135,7 @@ component {
 		try {
 			savecontent variable="local.output"{
 
-			o('component extends="mxunit.framework.testCase" {');
+			o('component extends="cfspec.core.spec.testCase" {');
 			nl()
 				//Component Body
 				tab(1)
@@ -164,7 +163,7 @@ component {
 				//entity methods
 				if(structKeyExists(metaData,"persistent") and metaData.persistent IS true)
 				{
-					var entityTester = new entityTester(spec.class);
+					var entityTester = new entityTester(listLast(spec.class,"."));
 					var entityName = entityTester.getEntityName();
 					var simpleProps = entityTester.getSimpleProperties();
 					/* First we want to test the basic methods: entityNew, entitySave, entityDelete
@@ -186,6 +185,53 @@ component {
 						o('ORMFlush();')
 						tab("-1");
 					o('}')
+
+					/*Test Relationships
+					Now we want to complete more advanced tests of the relationships
+					*/
+					local.relationships = entityTester.getRelationships();
+					for(local.relation in local.relationships)
+					{
+
+						local.otherTester = new entityTester(local.relation.cfc);
+						local.otherName = local.relation.cfc
+						local.otherSimpleProps = local.otherTester.getSimpleProperties();
+
+						if(local.relation.fieldtype IS "one-to-many")
+						{
+							o('public function oneToMany_should_add_the_relation_#entityName#_to_#local.otherName#(){');
+								tab('+1');
+								o('//Create the first entity')
+								o('var #entityName# = entityNew("#entityName#");')
+								for(var prop in simpleProps)
+								{
+									o('#entityName#.set#prop.name#("#prop.specTestValue#");')
+								}
+								o('entitySave(#entityName#);')
+
+								o('//Create the second entity')
+								o('var #local.otherName# = entityNew("#local.otherName#");')
+								for(var prop in otherSimpleProps)
+								{
+									o('#local.otherName#.set#prop.name#("#prop.specTestValue#");')
+								}
+								o('entitySave(#local.otherName#);')
+
+								o('//Add the second entiry to the first')
+								o('#entityName#.add#local.otherName#(#local.otherName#)')
+								o('ORMFlush()')
+
+								o('//Delete the entities that were created')
+								o('entityDelete(#entityName#)');
+								o('entityDelete(#local.otherName#)')
+								o('ORMFlush()');
+
+								tab("-1")
+							o('}')
+						}
+					}
+
+					//writeDump(local.relationships);abort;
 					
 				}
 					
@@ -257,7 +303,7 @@ component {
 						if(structKeyExists(func[context],"before") AND isClosure(func[context].before))
 						{
 							o('//Call the before function that was specified')
-							o('variables.spec.tests["#name#"]["#context#"].before()')
+							o('variables.spec.tests["#name#"]["#context#"].before(test)')
 						}
 
 						if(structKeyExists(func[context],"given"))
@@ -337,7 +383,7 @@ component {
 										{
 											if(isClosure(test.value))
 											{
-												o('var assertValue = variables.spec.tests.#name#["#context#"].then.assert[#i#].value()')
+												o('var assertValue = variables.spec.tests.#name#["#context#"].then.assert[#i#].value(testResult)')
 												o('assert(assertValue);');
 											}
 											else
