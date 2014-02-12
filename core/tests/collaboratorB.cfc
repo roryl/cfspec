@@ -6,7 +6,9 @@
 *
 */
 
-component output="false" displayname=""  {
+component output="false" displayname="" accessors="true" {
+
+	property name="collaboratorC";
 
 	public function init(){
 		variables.collaboratorC = new collaboratorC();

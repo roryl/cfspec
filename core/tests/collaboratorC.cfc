@@ -6,7 +6,7 @@
 *
 */
 
-component output="false" displayname=""  {
+component output="false" displayname="" {
 
 	public function init(){
 		return this;
@@ -16,7 +16,8 @@ component output="false" displayname=""  {
 		return "My simple value";
 	}
 
-	public function getComplexValue(){
+	public string function getComplexValue(){
+
 		return {test:"value",test2:"value2",test3:"value3"}
 	}
 }

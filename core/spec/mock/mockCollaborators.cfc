@@ -12,6 +12,7 @@ component output="false" displayname=""  {
 		
 		local.object = arguments.object;
 		local.object.mockCollaboratorFunction = this.mockCollaboratorFunction;
+		
 
 		//Get the collaborators from the spec
 		local.spec = "";
@@ -21,19 +22,11 @@ component output="false" displayname=""  {
 		//For each collaborator, mock out the collaborator
 		for(local.collaborator in local.collaborators)
 		{
-			if(listFirst(local.collaborator,".") IS "this")
-			{
-				
-			}
-			else
-			{
 				local.collaboratorObject = listFirst(local.collaborator,".");
 				local.collaboratorFunction = listLast(local.collaborator,".");
 				local.object.mockCollaboratorFunction(collaborator=local.collaboratorObject,
 													  functionName=local.collaboratorFunction,
-													  contextInfo=arguments.contextInfo);
-			}
-						
+													  contextInfo=arguments.contextInfo);						
 		}
 
 		return local.object;
@@ -44,39 +37,81 @@ component output="false" displayname=""  {
 		var spec="";
 		include template="#arguments.contextInfo.specPath#";
 
+		//Get the value of the specification document
 		local.mockValue = spec.tests[arguments.contextInfo.functionName][arguments.contextInfo.scenarioName].with["#arguments.collaborator#.#arguments.functionName#"];
+
+		/*
+		Collaborators can either be in the component under test or a dependency within the variables scope. Look
+		at the collaborator value passed in and create a refernece to that object
+		*/
+		if(arguments.collaborator IS "this"){
+			local.collaboratorReference = this;
+		} else {
+			local.collaboratorReference = variables[collaborator]
+		}	
 		
+
+		/*
+		There are currently three types of overrides for collaborators:
+
+			1. Mimic
+				- The override follows the specification from the overriden dependencies specification. 
+			2. Closure
+				- The override specifies a function inline that will be used to replace the existing function. This is the quick and dirty way to mockout a return of a function
+			3 Value 
+				- The ovveride specifies a value that we want the function call to return instead of the natural value
+		*/
+
+		// 1. MIMIC
 		if(isStruct(local.mockValue) AND structKeyExists(local.mockValue,"mimic"))
 		{
-
-			local.specPath = getMetaData(variables[collaborator]).fullname;
+			local.specPath = getMetaData(local.collaboratorReference).fullname;
 			local.specPath = replace(local.specPath,".","/","all");
 			local.specPAth =  "/" & local.specPath & ".spec";
 
 			local.contextInfo = {
-				object = variables[collaborator],
+				object = local.collaboratorReference,
 				specPath = local.specPath,
 				functionName = arguments.functionName,
 				scenarioName = local.mockValue.mimic
 			}
 
-			variables[collaborator] = new cfspec.core.spec.mockBuilderNew(argumentCollection=local.contextInfo);
+			local.collaboratorReference = new cfspec.core.spec.mockBuilderNew(argumentCollection=local.contextInfo);
+
 		}
+
+		//2. CLOSURE
 		else if(isClosure(local.mockValue))
 		{
-			variables[collaborator][arguments.functionName] = local.mockValue;
+			local.collaboratorReference[arguments.functionName] = local.mockValue;
 		}
+
+		//3. VALUE
+		else
+		{
+			//Set the value from the spec into the this scope of the object so that it can be called			
+			local.collaboratorReference["#arguments.functionName#_value"] = local.mockValue;
+
+			//Delete the original function from the object so that we can override it
+			structDelete(local.collaboratorReference,arguments.functionName);
+
+			//Add onMissingMethod to the object so that we can know which function was called and retreive the value that we just set into the this scope
+			local.collaboratorReference.onMissingMethod = function(missingMethodName, missingMethodArguments){
+				return this["#missingMethodName#_value"];
+			}
+			
+		}
+
+		/*
+		It seems necessary to write the variable reference in the opposite direction otherwise the original value remains
+		*/
+		if(arguments.collaborator IS "this"){
+			local.collaboratorReference = this;
+		} else {
+			variables[collaborator] = local.collaboratorReference
+		}				
 		
-	};
-
-	public function mockThisScopeFunction()
-	{
-
-	}
-
-	public function mimicSpec(){
-
-	}
+	};	
 
 	public function getSpecPathFromComponent(required component object)
 	{

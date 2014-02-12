@@ -8,7 +8,7 @@
 
 component output="false" displayname=""  {
 
-	public function init(required component object, required string specPath, required string functionName, required string scenarioName){
+	public function init(required component object, required string specPath, required string functionName, required string scenarioName, parentName="root"){
 		
 
 		local.contextInfo = {
@@ -44,7 +44,9 @@ component output="false" displayname=""  {
 
 		/* Wrap the object in a proxy method so that we can introspect the arguments and return values
 		of a function call */
-		return new mock.mockProxy(object);
+		local.result = new mock.mockProxy(object=local.object,parentName=arguments.parentName);
+		//writeDump(local.result);
+		return local.result;
 	}
 
 	public function getSpecContext(required struct contextInfo){

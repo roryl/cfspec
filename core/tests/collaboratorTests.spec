@@ -4,7 +4,7 @@ spec = {
 	mockObjects:["collaboratorA"],
 	tests:{
 		getSimpleValues:{
-			"Overriding collaborator with simple value":{
+			"Overriding collaborator function call with a value":{
 				with:{
 					"collaboratorA.getSimpleValue":"My new value"
 				},
@@ -30,6 +30,21 @@ spec = {
 				},
 				then:{
 					returns:"isStruct"
+				}
+			}
+		},
+		getLocalVariable:{
+			"Should return the local variable":{
+				then:{
+					returns:"My local variable"
+				}
+			},
+			"Should override the this scope function":{
+				with:{
+					"this.getLocalVariable":"My new local variable"
+				},
+				then:{
+					returns:"My new local variable"
 				}
 			}
 		}
