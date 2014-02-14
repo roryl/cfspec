@@ -12,6 +12,7 @@ component output="false" displayname="" accessors="true"{
 
 	public function init(){
 		variables.collaboratorA = new collaboratorA();
+		variables.collaboratorC = new collaboratorA();
 		variables.localVariable ="My local variable";
 		return this;
 	}
@@ -22,11 +23,17 @@ component output="false" displayname="" accessors="true"{
 	}
 
 	public function getComplexValues(){
+		writeLog(file="mock",text="CALLED collaboratorTests.getComplexValue()");
 		return variables.collaboratorA.getComplexValue();
 	}
 
 	public function getLocalVariable(){
 		return variables.localVariable;
+	}
+
+	public function getCollaboratorC()
+	{
+
 	}
 
 

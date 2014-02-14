@@ -8,17 +8,18 @@
 
 component output="false" displayname=""  {
 
-	public function init(required component object, required struct contextInfo){
+	public function init(required component object, required struct contextInfo, parentName="root"){
 		
+
 		local.object = arguments.object;
 		local.object.mockCollaboratorFunction = this.mockCollaboratorFunction;
 		
-
 		//Get the collaborators from the spec
 		local.spec = "";
 		include template="#arguments.contextInfo.specPath#";
 		local.collaborators = local.spec.tests[arguments.contextInfo.functionName][arguments.contextInfo.scenarioName].with;
 
+		
 		//For each collaborator, mock out the collaborator
 		for(local.collaborator in local.collaborators)
 		{
@@ -29,6 +30,7 @@ component output="false" displayname=""  {
 													  contextInfo=arguments.contextInfo);						
 		}
 
+		
 		return local.object;
 	}
 
@@ -48,9 +50,7 @@ component output="false" displayname=""  {
 			local.collaboratorReference = this;
 		} else {
 			local.collaboratorReference = variables[collaborator]
-		}	
-		
-
+		}			
 		/*
 		There are currently three types of overrides for collaborators:
 
@@ -65,7 +65,23 @@ component output="false" displayname=""  {
 		// 1. MIMIC
 		if(isStruct(local.mockValue) AND structKeyExists(local.mockValue,"mimic"))
 		{
+
 			local.specPath = getMetaData(local.collaboratorReference).fullname;
+
+			//If this is a proxy object, then we need to get the spec from the real collaborator object
+			if(local.specPath CONTAINS "mockProxy")
+			{
+				local.specPath = getMetaData(local.collaboratorReference.getobject()).fullName;
+				local.collaboratorReference = local.collaboratorReference.getobject();
+			}
+
+			//If this is a proxy object, then we need to get the spec from the real collaborator object
+			if(local.specPath CONTAINS "affiliates.core.service.model.proxy")
+			{
+				local.specPath = getMetaData(local.collaboratorReference.object).fullName;
+				local.collaboratorReference = local.collaboratorReference.object;
+			}
+
 			local.specPath = replace(local.specPath,".","/","all");
 			local.specPAth =  "/" & local.specPath & ".spec";
 
@@ -74,8 +90,8 @@ component output="false" displayname=""  {
 				specPath = local.specPath,
 				functionName = arguments.functionName,
 				scenarioName = local.mockValue.mimic
-			}
-
+			}			
+			
 			local.collaboratorReference = new cfspec.core.spec.mockBuilderNew(argumentCollection=local.contextInfo);
 
 		}
@@ -83,11 +99,12 @@ component output="false" displayname=""  {
 		//2. CLOSURE
 		else if(isClosure(local.mockValue))
 		{
+
 			local.collaboratorReference[arguments.functionName] = local.mockValue;
 		}
 
 		//3. VALUE
-		else
+		else if(isSimpleValue(local.mockValue))
 		{
 			//Set the value from the spec into the this scope of the object so that it can be called			
 			local.collaboratorReference["#arguments.functionName#_value"] = local.mockValue;
@@ -97,9 +114,9 @@ component output="false" displayname=""  {
 
 			//Add onMissingMethod to the object so that we can know which function was called and retreive the value that we just set into the this scope
 			local.collaboratorReference.onMissingMethod = function(missingMethodName, missingMethodArguments){
-				return this["#missingMethodName#_value"];
-			}
-			
+
+				return this["#arguments.missingMethodName#_value"];
+			}			
 		}
 
 		/*
@@ -109,14 +126,17 @@ component output="false" displayname=""  {
 			local.collaboratorReference = this;
 		} else {
 			variables[collaborator] = local.collaboratorReference
-		}				
-		
-	};	
+		}		
+
+	};
+
+	
 
 	public function getSpecPathFromComponent(required component object)
 	{
 		local.specPath = getMetaData(arguments.object).fullname;
 		local.specPath = replace(local.specPath,".","/","all");
+
 		return "/" & local.specPath & ".spec";
 	}
 }

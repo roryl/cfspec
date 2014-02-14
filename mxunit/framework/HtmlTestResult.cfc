@@ -162,8 +162,8 @@
 
 					</div>
 					<cfparam name="url.depth" default="0">
-					<a href="?dir=#url.dir#&depth=#url.depth#">Run Directory</a>
-					<a href="?dir=#url.dir#&depth=#url.depth#&reloadFiles">Reload Directory</a><br /><br />
+					<a href="?action=main.runner&dir=#url.dir#&depth=#url.depth#">Run Directory</a>
+					<a href="?action=main.runner&dir=#url.dir#&depth=#url.depth#&reloadFiles">Reload Directory</a><br /><br />
 					
 					Collaborator Depth:<a href="?#replace(CGI.QUERY_STRING,"&depth=#url.depth#","")#&depth=1">Unit</a>|<a href="?#replace(CGI.QUERY_STRING,"&depth=#url.depth#","")#&depth=2">Neightbors</a>|<a href="?#replace(CGI.QUERY_STRING,"&depth=#url.depth#","")#&depth=0">All</a>
 					<cfloop from="1" to="#ArrayLen(this.testResults)#" index="i">
@@ -181,7 +181,7 @@
 							<!--- printing incorrect results for MXUnitInstallTest.cfc - could be engine bug --->
 							<cfset classtesturl = Replace(this.testResults[i].component, ".", "/", "all")>
 							
-							<h3><a href="?dir=#url.dir#&com=#classTestURL#" title="Run all tests in #this.testResults[i].component#">#this.testResults[i].component#</a></h3>
+							<h3><a href="?action=main.runner&dir=#url.dir#&com=#classTestURL#" title="Run all tests in #this.testResults[i].component#">#this.testResults[i].component#</a></h3>
 
 							<table class="results tablesorter #theme#">
 								#tableHead#
@@ -190,7 +190,7 @@
 
 						<tr class="#lCase(this.testResults[i].TestStatus)#">
 							<td class="test">
-								<a href="?dir=#url.dir#&com=#this.testResults[i].component#&testmethod=#this.testResults[i].TestName#" title="only run the #this.testResults[i].TestName# test">#this.testResults[i].TestName#</a>
+								<a href="?action=main.runner&dir=#url.dir#&com=#this.testResults[i].component#&testmethod=#this.testResults[i].TestName#" title="only run the #this.testResults[i].TestName# test">#this.testResults[i].TestName#</a>
 							</td>
 							<td class="error">
 								#renderErrorStruct(this.testResults[i].Error)#

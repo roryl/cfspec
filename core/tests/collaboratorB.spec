@@ -15,6 +15,13 @@ spec = {
 					returns:"isStruct"
 				}
 			}
+		},
+		getSimpleValue:{
+			"Should return the simple value":{
+				then:{
+					returns:"My simple value"
+				}
+			}
 		}
 	}
 }

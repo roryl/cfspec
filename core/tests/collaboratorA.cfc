@@ -22,6 +22,13 @@ component output="false" displayname="" accessors="true" {
 
 	public function getComplexValue()
 	{
+		writeLog(file="mock",text="CALLED CollaboratorA.getComplexValue()");
 		return variables.collaboratorB.getComplexValue();
+	}
+
+	public function getSimpleAndComplexValue()
+	{
+		variables.collaboratorB.getSimpleValue();
+		variables.collaboratorB.getComplexValue();
 	}
 }

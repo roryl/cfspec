@@ -16,8 +16,8 @@ component output="false" displayname="" {
 		return "My simple value";
 	}
 
-	public string function getComplexValue(){
-
+	public struct function getComplexValue(){
+		writeLog(file="mock",text="CALLED CollaboratorC.getComplexValue()");
 		return {test:"value",test2:"value2",test3:"value3"}
 	}
 }

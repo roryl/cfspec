@@ -30,17 +30,6 @@ component accessors="true" {
 			variables.component = arguments.componentPath;
 		}
 
-		//Copy variables scope from component into this one
-		variables.component.copyVariables = function(){
-			writeDump(variables);
-			return variables;
-		}
-		
-
-		structAppend(variables,variables.component.copyVariables());
-		writeDump(variables);
-		
-
 		variables.meta = getMetaData(variables.component);
 		variables.methodReturns = {};
 		variables.methodSignatures = {};

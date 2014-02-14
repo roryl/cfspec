@@ -187,11 +187,18 @@ component {
 					Now we want to complete more advanced tests of the relationships
 					*/
 					local.relationships = entityTester.getRelationships();
+					
 					for(local.relation in local.relationships)
 					{
 
 						local.otherTester = new entityTester(local.relation.cfc);
-						local.otherName = local.relation.cfc
+
+						if(structKeyExists(local.relation,"singularname")){
+							local.otherName = local.relation.singularname;
+						} else {
+							local.otherName = local.relation.cfc;
+						}
+						
 						local.otherSimpleProps = local.otherTester.getSimpleProperties();
 
 						if(local.relation.fieldtype IS "one-to-many")
@@ -213,6 +220,9 @@ component {
 									o('#local.otherName#.set#prop.name#("#prop.specTestValue#");')
 								}
 								o('entitySave(#local.otherName#);')
+
+								o('//Set the first entity into the second')
+								o('#local.otherName#.setUser(users)')
 
 								o('//Add the second entiry to the first')
 								o('#entityName#.add#local.otherName#(#local.otherName#)')
@@ -253,6 +263,7 @@ component {
 						o('public function #name#_#clean#(){');
 						//Function body	
 						tab(2);
+							o('request.mockDepth = 0');
 
 
 						if(structKeyExists(spec.tests[name],"setup"))
@@ -376,7 +387,7 @@ component {
 									
 									
 								}
-								else if(fact IS "assert")
+								/*else if(fact IS "assert")
 								{
 									for(var i=1; i LTE arrayLen(facts[fact]); i=i+1)
 									{
@@ -399,7 +410,7 @@ component {
 										
 										
 									}
-								}
+								}*/
 
 								else if(fact is "assertTrue")
 								{
@@ -415,7 +426,7 @@ component {
 						if(structKeyExists(func[context],"after") AND isClosure(func[context].after))
 						{
 							o('//Call the after function that was specified')
-							o('variables.spec.tests["#name#"]["#context#"].after()')
+							o('variables.spec.tests["#name#"]["#context#"].after(test)')
 						}
 						
 
