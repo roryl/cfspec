@@ -18,9 +18,14 @@ component {
 		var simpleProps = [];
 		for(var prop in properties)
 		{	
-			if(NOT (structKeyExists(prop,"fieldType") OR (structKeyExists(prop,"insert") AND prop.insert IS false)))
+			
+			if(NOT structKeyExists(prop,"fieldType"))
 			{
-				arrayAppend(simpleProps,prop);
+				if(structKeyExists(prop,"insert") AND prop.insert IS NOT "false")
+				{
+					
+					arrayAppend(simpleProps,prop);
+				}
 			}
 
 		}

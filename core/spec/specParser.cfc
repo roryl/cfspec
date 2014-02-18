@@ -174,7 +174,7 @@ component {
 						o('var #entityName# = entityNew("#entityName#");')
 						for(var prop in simpleProps)
 						{
-							o('#entityName#.set#prop.name#("#prop.specTestValue#");')
+							o('#entityName#.set#prop.name#("#prop.specTestValue#");')	
 						}
 						o('entitySave(#entityName#);')
 						o('ORMFlush();')
