@@ -322,7 +322,7 @@ component {
 							if(isClosure(args))
 							{
 								//Set the arguments into the request scope as they can be referenced in asserts and cleanups
-								o('request.given = variables.spec.tests["#name#"]["#context#"].given();');
+								o('request.given = variables.spec.tests["#name#"]["#context#"].given(test);');
 							}
 							else
 							{

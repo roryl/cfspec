@@ -7,7 +7,7 @@
 */
 
 
-component output="false" displayname=""  accessors="true" {
+component output="false" displayname=""  accessors="true" extends="cfspec.core.spec.testCase" {
 
 	property name="object";	
 

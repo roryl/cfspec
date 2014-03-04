@@ -104,7 +104,7 @@ component output="false" displayname=""  {
 		}
 
 		//3. VALUE
-		else if(isSimpleValue(local.mockValue))
+		else
 		{
 			//Set the value from the spec into the this scope of the object so that it can be called			
 			local.collaboratorReference["#arguments.functionName#_value"] = local.mockValue;
