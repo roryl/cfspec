@@ -7,11 +7,11 @@
 */
 
 
-component output="false" displayname=""  accessors="true" extends="cfspec.core.spec.testCase" {
+component output="false" displayname=""  accessors="true" extends="" {
 
 	property name="object";	
 
-	public function init(required component object, required string parentName, required numeric mockDepth, required contextInfo){
+	public function create(required component object, required string parentName, required numeric mockDepth, required contextInfo){
 		variables.object = arguments.object;
 		variables.parentName = arguments.parentName;
 		variables.depth = arguments.mockDepth;
@@ -21,8 +21,23 @@ component output="false" displayname=""  accessors="true" extends="cfspec.core.s
 		return this;
 	}
 
+	private function executeSQL(required string SQLString)
+	{
+		return genericQuery(arguments.SQLString);
+	}
+
+	private function genericQuery(required string SQLString){
+		
+		local.result = true;
+		query name="local.result"{
+			echo("#arguments.sqlString#");
+		}
+		return local.result;
+	}
+
 	public function onMissingMethod(missingMethodName, missingMethodArguments)
 	{	
+
 		param name="url.depth" default="0";
 		writeLog(file="mock",text="#variables.depth#");
 		if(url.depth IS 0){
@@ -60,15 +75,21 @@ component output="false" displayname=""  accessors="true" extends="cfspec.core.s
 			
 
 			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=arguments.missingMethodArguments)");
-			if(NOT isNull(local.value))
-			{
-				variables.cache.cachePut(local.value,"#variables.objectName#_#arguments.missingMethodName#");	
-			}
 
 			//Look for any after function in the spec and call it if it exists
 			local.spec = "";
 			include template="#variables.contextInfo.specPath#";
 			local.specContext = local.spec.tests[variables.contextInfo.functionName][variables.contextInfo.scenarioName];
+
+			if(arguments.missingMethodName IS NOT variables.contextInfo.functionName)
+			{
+				return local.value;
+			}
+
+			if(NOT isNull(local.value))
+			{
+				variables.cache.cachePut(local.value,"#variables.objectName#_#arguments.missingMethodName#");	
+			}
 
 			//Call any after functions for this collaborator specification
 			if(structKeyExists(local.specContext,"after"))
@@ -79,17 +100,24 @@ component output="false" displayname=""  accessors="true" extends="cfspec.core.s
 			//Call any assert statements for this specification
 			if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"assert"))
 			{	
+
 				local.asserts = local.specContext.then.assert;
 				for(assert in asserts)
 				{
 					if(isSimpleValue(assert))
 					{
 
-					}else if(isStruct(assert))
+					}
+					else if(isStruct(assert))
 					{
+
 						if(isClosure(assert.value))
 						{
-							local.result = assert.value();
+							local.result = assert.value(local.value);
+							if(local.result IS false)
+							{
+								throw(message="#assert.message#");
+							}
 						}	
 					}
 					
