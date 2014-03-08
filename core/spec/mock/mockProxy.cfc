@@ -72,14 +72,19 @@ component output="false" displayname=""  accessors="true" extends="" {
 		try {
 
 			request.given = arguments.missingMethodArguments;
-			
-
-			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=arguments.missingMethodArguments)");
 
 			//Look for any after function in the spec and call it if it exists
 			local.spec = "";
 			include template="#variables.contextInfo.specPath#";
 			local.specContext = local.spec.tests[variables.contextInfo.functionName][variables.contextInfo.scenarioName];
+			
+			//Call any after functions for this collaborator specification
+			if(structKeyExists(local.specContext,"before"))
+			{
+				local.specContext.before(variables.object);
+			}
+
+			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=arguments.missingMethodArguments)");
 
 			if(arguments.missingMethodName IS NOT variables.contextInfo.functionName)
 			{
@@ -89,12 +94,6 @@ component output="false" displayname=""  accessors="true" extends="" {
 			if(NOT isNull(local.value))
 			{
 				variables.cache.cachePut(local.value,"#variables.objectName#_#arguments.missingMethodName#");	
-			}
-
-			//Call any after functions for this collaborator specification
-			if(structKeyExists(local.specContext,"after"))
-			{
-				local.specContext.after();
 			}
 
 			//Call any assert statements for this specification
@@ -113,7 +112,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 
 						if(isClosure(assert.value))
 						{
-							local.result = assert.value(local.value);
+							local.result = assert.value(local.value,variables.object);
 							if(local.result IS false)
 							{
 								throw(message="#assert.message#");
@@ -123,17 +122,36 @@ component output="false" displayname=""  accessors="true" extends="" {
 					
 				}
 			}
+
+			//Call any after functions for this collaborator specification
+			if(structKeyExists(local.specContext,"after"))
+			{
+				local.specContext.after();
+			}
 			
 		}
 		catch(any e) {
-
-			if(NOT e.message CONTAINS "There was an error in the collaborator")
+			local.name = getMetaData(variables.object).fullName;
+			writeLog(file="mock",text="There was an error in the collaborator #local.name#, parent was #variables.parentName#");
+			if(e.message CONTAINS "There was an error in the collaborator")
+			{
+				rethrow;
+				
+			} else
 			{
 				local.name = getMetaData(variables.object).fullName;
-				e.message = "There was an error in the collaborator #local.name# " & e.message;
+				if(variables.parentName IS "root")
+				{
+					e.message = e.message;
+				}
+				else{
+					e.message = "There was an error in the collaborator #local.name#, parent was #variables.parentName#. Message Is: " & e.message;
+				}
+				
+				throw(message=e.message);
 			}
 			
-			rethrow;
+			
 		}
 		if(NOT isNull(local.value))
 		{

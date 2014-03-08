@@ -192,7 +192,7 @@
 							<td class="test">
 								<a href="?action=main.runner&dir=#url.dir#&com=#this.testResults[i].component#&testmethod=#this.testResults[i].TestName#" title="only run the #this.testResults[i].TestName# test">#this.testResults[i].TestName#</a>
 							</td>
-							<td class="error">
+							<td class="error" style="##">
 								#renderErrorStruct(this.testResults[i].Error)#
 							</td>
 							<td class="output">
@@ -243,10 +243,12 @@
 			<cfsavecontent variable="result">
 				<cfoutput>
 					<cfif Left(arguments.ErrorCollection.Message, 2) neq "::">
-						<strong>#Replace(arguments.ErrorCollection.Message,"::","<br />")#</strong> <br />
-						<pre style="width:100%;">#arguments.ErrorCollection.Detail#</pre>
+						<span style="#((arguments.ErrorCollection.Message CONTAINS "collaborator")?"color:orange;":"")#"><strong>#Replace(arguments.ErrorCollection.Message,"::","<br />")#</strong></span> <br />
+						<pre style="#((arguments.ErrorCollection.Message CONTAINS "collaborator")?"color:orange;":"")#">#arguments.ErrorCollection.Detail#</pre>
+						
 					<cfelse>
-						#arguments.ErrorCollection.Message#
+						<span style="#((arguments.ErrorCollection.Message CONTAINS "collaborator")?"color:orange;":"")#">#arguments.ErrorCollection.Message#</span>
+						
 					</cfif>
 
 					<table class="tagcontext">

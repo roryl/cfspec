@@ -14,6 +14,10 @@ spec = {
 				}
 			},
 			"Should test the after function for a scenario":{
+				with:{
+					"collaboratorB.getComplexValue":{mimic:"Should return the complex value from C"}
+
+				},
 				then:{
 					returns:"isStruct"
 				},

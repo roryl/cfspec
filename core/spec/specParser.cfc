@@ -350,7 +350,7 @@ component {
 								if(fact IS "returns")
 								{
 									o('var assertValue = variables.spec.tests.#name#["#context#"].then.returns')
-									if(facts[fact] IS "void")
+									if(facts[fact] IS "void" OR facts[fact] IS "isVoid")
 									{
 										o('assert(NOT isDefined("testResult"),"Result returned a value but the specification expected to return void")')
 									}

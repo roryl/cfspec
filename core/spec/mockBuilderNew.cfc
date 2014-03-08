@@ -27,7 +27,6 @@ component output="false" displayname=""  {
 		//Save the object into the local scope for easy reference
 		local.object = arguments.object;
 
-
 		//Check if the object passed in is already a mockProxy object. If it is, then we want to get the object out of the proxy so that we can mock another method
 		
 		if(getMetaData(local.object).fullName CONTAINS "mockProxy")

@@ -20,7 +20,8 @@ spec = {
 			"Should return the simple value":{
 				then:{
 					returns:"My simple value"
-				}
+				},
+				
 			}
 		}
 	}

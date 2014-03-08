@@ -27,14 +27,15 @@ component output="false" displayname=""  {
 				local.collaboratorFunction = listLast(local.collaborator,".");
 				local.object.mockCollaboratorFunction(collaborator=local.collaboratorObject,
 													  functionName=local.collaboratorFunction,
-													  contextInfo=arguments.contextInfo);						
+													  contextInfo=arguments.contextInfo,
+													  parentName=getMetaData(local.object).fullName);						
 		}
 
 		
 		return local.object;
 	}
 
-	public function mockCollaboratorFunction(required string collaborator, required string functionName, required struct contextInfo){
+	public function mockCollaboratorFunction(required string collaborator, required string functionName, required struct contextInfo, parentName="root"){
 		
 		var spec="";
 		include template="#arguments.contextInfo.specPath#";
@@ -89,7 +90,8 @@ component output="false" displayname=""  {
 				object = local.collaboratorReference,
 				specPath = local.specPath,
 				functionName = arguments.functionName,
-				scenarioName = local.mockValue.mimic
+				scenarioName = local.mockValue.mimic,
+				parentName = arguments.parentName
 			}			
 			
 			local.collaboratorReference = new cfspec.core.spec.mockBuilderNew(argumentCollection=local.contextInfo);
