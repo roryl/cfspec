@@ -37,7 +37,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 
 	public function onMissingMethod(missingMethodName, missingMethodArguments)
 	{	
-
+		
 		param name="url.depth" default="0";
 		writeLog(file="mock",text="#variables.depth#");
 		if(url.depth IS 0){
@@ -71,7 +71,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 		writeLog(file="mock",text="CALL #variables.objectName#.#arguments.missingMethodName#");
 		try {
 
-			request.given = arguments.missingMethodArguments;
+			
 
 			//Look for any after function in the spec and call it if it exists
 			local.spec = "";
@@ -81,15 +81,45 @@ component output="false" displayname=""  accessors="true" extends="" {
 			//Call any after functions for this collaborator specification
 			if(structKeyExists(local.specContext,"before"))
 			{
-				local.specContext.before(variables.object);
+				//If the before is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
+				if(isClosure(local.specContext.before))
+				{
+					local.specContext.before(variables.object);	
+				}
+				else if(isStruct(local.specContext.before))
+				{
+					if(structKeyExists(local.specContext.before,"unit") AND variables.depth IS 1)
+					{
+						local.specContext.before.unit(variables.object);
+					}
+				}
+				
 			}
 
-			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=arguments.missingMethodArguments)");
 
-			if(arguments.missingMethodName IS NOT variables.contextInfo.functionName)
+			if(structKeyExists(local.specContext,"given") AND variables.depth IS 1)
 			{
-				return local.value;
+				if(isClosure(local.specContext.given))
+				{
+					request.given = local.specContext.given(variables.object);		
+				}
+				else
+				{
+					request.given = local.specContext.given;
+				}
+				local.given = request.given;
 			}
+			else
+			{
+				local.given = arguments.missingMethodArguments;
+			}
+
+			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");
+
+			// if(arguments.missingMethodName IS NOT variables.contextInfo.functionName)
+			// {
+			// 	return local.value;
+			// }
 
 			if(NOT isNull(local.value))
 			{
@@ -126,8 +156,21 @@ component output="false" displayname=""  accessors="true" extends="" {
 			//Call any after functions for this collaborator specification
 			if(structKeyExists(local.specContext,"after"))
 			{
-				local.specContext.after();
+				//If the after is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
+				if(isClosure(local.specContext.after))
+				{
+					local.specContext.after(variables.object);	
+				}
+				else if(isStruct(local.specContext.after))
+				{
+					if(structKeyExists(local.specContext.after,"unit") AND variables.depth IS 1)
+					{
+						local.specContext.after.unit(variables.object);
+					}
+				}
 			}
+
+			
 			
 		}
 		catch(any e) {
@@ -148,7 +191,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 					e.message = "There was an error in the collaborator #local.name#, parent was #variables.parentName#. Message Is: " & e.message;
 				}
 				
-				throw(message=e.message);
+				throw(e);
 			}
 			
 			

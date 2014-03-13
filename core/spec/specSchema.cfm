@@ -31,7 +31,7 @@ schema = {
 			description:"A function defining custom code to execute at the startup of the test case. This runs only once per spec",
 			types="function",
 			required:false,
-			example:[{code:""}]
+			example:[{code:"setup:function(){//Do something}"}]
 		},
 		{
 			title:"tests",
@@ -49,7 +49,7 @@ schema = {
 					children:[
 						{
 							title:"Setup",
-							description:"A function to call to setup all scenarios under this test. It will be called once per scenario",
+							description:"A function to call to setup all scenarios under this test. It will be called once per scenario before object creation and before the 'before' functions",
 							types:"function",
 							required:false,
 							example:[{code:'setup:function(){//Setup code for each scneario under test}'}]
@@ -64,9 +64,18 @@ schema = {
 								{
 									title:"before",
 									description:"This is a closure which can be called to setup information that is not actually apart of the test like inserting fake records into a database. This is a setup for the scenario",
-									types:"function",
+									types:"function,struct",
 									required:false,
-									example:[{code:'before:function(){//Setup the test with some other conditions}'}]
+									example:[{code:'before:function(){//Children}'}],
+									children:[
+										{
+											title:"unit",
+											description:"If this before should only be called when it is a unit test (and not as a collaborator) then set it into unit",
+											types:"function",
+											required:false,
+											example:[{code:'unit:function(){//Code to run whenever this scenario is a unit test}'}]
+										}
+									]
 								},
 								{
 									title:"given",
@@ -140,7 +149,16 @@ schema = {
 									description:"This is a closure which can be called to cleanup information after the test, like deleting database information. This is a teardown.",
 									types:"function",
 									required:false,
-									example:[{code:'after:function(){//Code to run after the test completes. This is usually used to clean up data}'}]
+									example:[{code:'after:function(){//Code to run after the test completes. This is usually used to clean up data}'}],
+									children:[
+										{
+											title:"unit",
+											description:"If this after should only be called when it is a unit test (and not as a collaborator) then set it into unit",
+											types:"function",
+											required:false,
+											example:[{code:'unit:function(){//Code to run whenever this scenario is a unit test}'}]
+										}
+									]
 								},
 							]
 

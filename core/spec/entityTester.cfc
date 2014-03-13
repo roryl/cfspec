@@ -17,13 +17,15 @@ component {
 		var properties = variables.metaData.properties;
 		var simpleProps = [];
 		for(var prop in properties)
-		{	
-			
+		{				
 			if(NOT structKeyExists(prop,"fieldType"))
 			{
 				if(structKeyExists(prop,"insert") AND prop.insert IS NOT "false")
+				{					
+					arrayAppend(simpleProps,prop);
+				}
+				else if(NOT structKeyExists(prop,"insert"))
 				{
-					
 					arrayAppend(simpleProps,prop);
 				}
 			}
@@ -47,6 +49,6 @@ component {
 	}
 
 	public function getEntityName(){
-		return listLast(metaData.fullName,".");
+		return listLast(variables.metaData.fullName,".");
 	}
 }

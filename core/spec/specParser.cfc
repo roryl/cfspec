@@ -163,6 +163,7 @@ component {
 					var entityTester = new entityTester(listLast(spec.class,"."));
 					var entityName = entityTester.getEntityName();
 					var simpleProps = entityTester.getSimpleProperties();
+					
 					/* First we want to test the basic methods: entityNew, entitySave, entityDelete
 					we will accomplish this by getting all of the simple properties (non relationships and non identities)
 					and using those properties to populate the calls
@@ -214,7 +215,7 @@ component {
 								o('entitySave(#entityName#);')
 
 								o('//Create the second entity')
-								o('var #local.otherName# = entityNew("#local.otherName#");')
+								o('var #local.otherName# = entityNew("#local.relation.cfc#");')
 								for(var prop in otherSimpleProps)
 								{
 									o('#local.otherName#.set#prop.name#("#prop.specTestValue#");')
@@ -308,13 +309,13 @@ component {
 						o('//Pass the component under test to the mockBuilder. The mock builder will mock out state and dependencies as described by the spec')
 						o('test = new cfspec.core.spec.mockBuilderNew(test,"#variables.specFilePath#","#name#","#context#")')
 
-						if(structKeyExists(func[context],"before") AND isClosure(func[context].before))
+						/*if(structKeyExists(func[context],"before") AND isClosure(func[context].before))
 						{
 							o('//Call the before function that was specified')
 							o('variables.spec.tests["#name#"]["#context#"].before(test)')
-						}
+						}*/
 
-						if(structKeyExists(func[context],"given"))
+						/*if(structKeyExists(func[context],"given"))
 						{
 
 							var args = func[context].given;//The arguments given to the test
@@ -339,7 +340,9 @@ component {
 						{
 							//Call the method under test
 							o('var testResult = test.#name#();');
-						}					
+						}*/	
+						//Call the method under test
+						o('var testResult = test.#name#();');
 						
 						o('//Assert facts based on the specification''s "then" attribute')
 						if(structKeyExists(func[context],"then"))
@@ -423,11 +426,11 @@ component {
 							}
 						}
 
-						if(structKeyExists(func[context],"after") AND isClosure(func[context].after))
+						/*if(structKeyExists(func[context],"after") AND isClosure(func[context].after))
 						{
 							o('//Call the after function that was specified')
 							o('variables.spec.tests["#name#"]["#context#"].after(test)')
-						}
+						}*/
 						
 
 						

@@ -23,6 +23,7 @@ component output="false" displayname=""  {
 		//For each collaborator, mock out the collaborator
 		for(local.collaborator in local.collaborators)
 		{
+		
 				local.collaboratorObject = listFirst(local.collaborator,".");
 				local.collaboratorFunction = listLast(local.collaborator,".");
 				local.object.mockCollaboratorFunction(collaborator=local.collaboratorObject,
@@ -30,7 +31,7 @@ component output="false" displayname=""  {
 													  contextInfo=arguments.contextInfo,
 													  parentName=getMetaData(local.object).fullName);						
 		}
-
+		
 		
 		return local.object;
 	}
@@ -94,7 +95,7 @@ component output="false" displayname=""  {
 				parentName = arguments.parentName
 			}			
 			
-			local.collaboratorReference = new cfspec.core.spec.mockBuilderNew(argumentCollection=local.contextInfo);
+			local.collaboratorReference = new cfspec.core.spec.mockBuilderNew(argumentCollection=local.contextInfo);			
 
 		}
 
@@ -114,10 +115,23 @@ component output="false" displayname=""  {
 			//Delete the original function from the object so that we can override it
 			structDelete(local.collaboratorReference,arguments.functionName);
 
-			//Add onMissingMethod to the object so that we can know which function was called and retreive the value that we just set into the this scope
-			local.collaboratorReference.onMissingMethod = function(missingMethodName, missingMethodArguments){
+			if(structKeyExists(local.collaboratorReference,"onMissingMethod"))
+			{
+				local.collaboratorReference._onMissingMethod = local.collaboratorReference.onMissingMethod;
+			}
 
-				return this["#arguments.missingMethodName#_value"];
+			//Add onMissingMethod to the object so that we can know which function was called and retreive the value that we just set into the this scope
+			local.collaboratorReference.onMissingMethod = function(missingMethodName,missingMethodArguments){
+
+				//If the saved value exists then we know we want to return just that value
+				if(structKeyExists(this,"#arguments.missingMethodName#_value")){
+					return this["#arguments.missingMethodName#_value"];
+				}
+				else{
+					//Otherwise we are going to call the function on the object mockProxy
+					evaluate("this._onMissingMethod(argumentCollection=arguments)");
+				}						
+				
 			}			
 		}
 
