@@ -131,25 +131,35 @@ component output="false" displayname=""  accessors="true" extends="" {
 			{	
 
 				local.asserts = local.specContext.then.assert;
-				for(assert in asserts)
+				if(isClosure(local.asserts))
 				{
-					if(isSimpleValue(assert))
+					local.result = local.asserts(local.value,variables.object);
+					if(local.result IS false)
 					{
-
+						throw(message="The assertion failed");
 					}
-					else if(isStruct(assert))
+				}
+				else if(isArray(local.asserts))
+				{
+					for(assert in asserts)
 					{
-
-						if(isClosure(assert.value))
+						if(isSimpleValue(assert))
 						{
-							local.result = assert.value(local.value,variables.object);
-							if(local.result IS false)
+
+						}
+						else if(isStruct(assert))
+						{
+
+							if(isClosure(assert.value))
 							{
-								throw(message="#assert.message#");
-							}
-						}	
+								local.result = assert.value(local.value,variables.object);
+								if(local.result IS false)
+								{
+									throw(message="#assert.message#");
+								}
+							}	
+						}					
 					}
-					
 				}
 			}
 
