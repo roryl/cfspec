@@ -16,7 +16,8 @@ component output="false" displayname="" accessors="true" {
 	}
 
 	public function getSimpleValue()
-	{
+	{		
+		writeLog(file="mock",text="CALLED CollaboratorB.getSimpleValue()");
 		return variables.collaboratorC.getSimpleValue();
 	}
 

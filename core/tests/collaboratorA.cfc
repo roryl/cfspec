@@ -26,9 +26,17 @@ component output="false" displayname="" accessors="true" {
 		return variables.collaboratorB.getComplexValue();
 	}
 
+	public function getMyOwnValue()
+	{
+		writeLog(file="mock",text="CALLED CollaboratorA.getMyOwnValue()");
+		return "My own Value";
+	}
+
 	public function getSimpleAndComplexValue()
 	{
+		getMyOwnValue();
 		variables.collaboratorB.getSimpleValue();
 		variables.collaboratorB.getComplexValue();
+		return true;
 	}
 }

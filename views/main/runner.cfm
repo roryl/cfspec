@@ -28,12 +28,12 @@ if(structKeyExists(url,"compile"))
 	if(structKeyExists(url,"com"))
 	{
 		specFile = replace(url.com,"Tests",".spec");
-		specFile = replace(specFile,url.dir,"/");
-		spec = new cfspec.core.spec.specParser().parseSpec("#specFile#","/affiliates/tests");
+		specFile = replace(specFile,"/cfspec/tests/","/");
+		spec = new cfspec.core.spec.specParser().parseSpec("#specFile#","/cfspec/tests");
 	}
 	else{
-		dirPath = replace(url.dir,"/affiliates/tests","/affiliates");
-		spec = new cfspec.core.spec.specParser().parseAllSpecs(dirPath,"/affiliates/tests");
+		dirPath = replace(url.dir,"/cfspec/tests/","/cfspec");
+		spec = new cfspec.core.spec.specParser().parseAllSpecs(dirPath,"/cfspec/tests");
 	}
 }
 	
@@ -60,8 +60,19 @@ testSuite = createObject("component","/mxunit.framework.TestSuite").TestSuite();
 //If a particulat component is passed in:
 if(structKeyExists(url,"com"))
 {
-	//Add all of the functions in the test
-	testSuite.addAll(url.com); 
+	if(structKeyExists(url,"test"))
+	{
+		specFile = replace(url.com,"Tests",".spec");
+		specFile = replace(specFile,"/cfspec/tests/","/");
+		local.specObject = new cfspec.core.spec.reader.spec(specFile);
+		local.tests = local.specObject.getTests().getTestByName(url.test).getUnitTestNames();
+		testSuite.add(url.com,arrayToList(local.tests));
+	}
+	else
+	{
+		//Add all of the functions in the test
+		testSuite.addAll(url.com); 
+	}
 }
 else 
 {

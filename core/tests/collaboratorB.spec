@@ -12,17 +12,36 @@ spec = {
 					"collaboratorC.getComplexValue":{mimic:"Should return the complex value"}
 				},
 				then:{
-					returns:"isStruct"
+					returns:"isStruct",					
+				}
+			},
+			"Collaborator with an assert scenario should be called":{
+				then:{
+					returns:"isStruct",
+					assert:function(){
+						request.assert_collaborator_b_complex_value = true;
+						return true;
+					}
 				}
 			}
 		},
 		getSimpleValue:{
 			"Should return the simple value":{
 				then:{
-					returns:"My simple value"
+					returns:"My simple value",					
 				},
 				
+			},
+			"Collaborator with an assert scenario should be called":{
+				then:{
+					returns:"My simple value",
+					assert:function(){
+						request.assert_collaborator_b_simple_value = true;
+						return true;
+					}
+				}
 			}
+
 		}
 	}
 }

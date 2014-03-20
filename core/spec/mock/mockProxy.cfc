@@ -10,30 +10,123 @@
 component output="false" displayname=""  accessors="true" extends="" {
 
 	property name="object";	
+	property name="parentName";
+	property name="depth";
+	property name="cache";
+	property name="objectName";
+	property name="contextInfo";
+	property name="mockContexts";
 
-	public function create(required component object, required string parentName, required numeric mockDepth, required contextInfo){
+	public function create(required component object, required string parentName, required numeric mockDepth){
 		variables.object = arguments.object;
 		variables.parentName = arguments.parentName;
 		variables.depth = arguments.mockDepth;
 		variables.cache = new mockCache();
 		variables.objectName = getMetaData(variables.object).fullName;
-		variables.contextInfo= arguments.contextInfo;	
+		variables.contextInfo = arguments.contextInfo;	
+		variables.mockContexts = {};
 		return this;
 	}
 
-	private function executeSQL(required string SQLString)
+	public function addMockContext(required functionName, required scope, required contextInfo)
 	{
-		return genericQuery(arguments.SQLString);
+		variables.mockContexts[arguments.functionName] = {
+			scope:arguments.type,
+			contextInfo:arguments.contextInfo
+		};
 	}
 
-	private function genericQuery(required string SQLString){
+	private function getContextByName(string functionName)
+	{
+
+	}
+
+	private function executeSQL(required string SQLString, datasource="")
+	{
+		return genericQuery(arguments.SQLString,arguments.datasource);
+	}
+
+	private function genericQuery(required string SQLString, datasource){		
 		
 		local.result = true;
-		query name="local.result"{
-			echo("#arguments.sqlString#");
+		if(structKeyExists(arguments,"datasource") AND trim(arguments.datasource) IS NOT "")
+		{
+			query name="local.result" datasource="#arguments.datasource#"{
+				echo("#arguments.sqlString#");
+			}
 		}
+		else
+		{
+			query name="local.result"{
+				echo("#arguments.sqlString#");
+			}
+		}		
 		return local.result;
 	}
+
+	public function getCallCount(required string functionName)
+	{
+		local.count = 0;
+		local.calls = callStackGet();
+		for(local.call in local.calls)
+		{
+			if(compareNoCase(local.call.function,arguments.functionName))
+			{
+				local.count = local.count + 1;
+			}
+		}
+		return local.count;
+	}
+
+	public function isEntity(required entity)
+	{	
+		local.meta = getMetaData(arguments.entity);
+		if(structKeyExists(meta,"persistent") AND meta.persistent AND isObject(arguments.entity))
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}		
+	}
+
+	private function assert(value=true,message=""){
+
+		if(arguments.value IS false)
+		{			
+			local.call = callStackGet()[2]
+		
+			local.specFile = fileOpen(local.call.template);
+			
+			local.readCount = 0;
+			while(!fileIsEOF(local.specFile))
+			{
+				local.readCount = local.readCount + 1;
+				local.code = fileReadLine(local.specFile);
+				
+				if(local.readCount IS local.call.lineNumber)
+				{
+					local.code = replace(local.code,"assert(","","all");
+					local.code = left(local.code,len(local.code) -1);
+					throw("Assertion failed <br /> Message Was:#arguments.message# <br />Called from: #local.call.template# <br />Line: #local.readCount# <br /> Asserted: #trim(local.code)#");
+				}
+			}
+			
+		}
+	}
+
+	private function countFunctionCall(required string functionName){
+		
+
+		if(NOT structKeyExists(request.funcCount,arguments.functionName))
+		{
+			request.funcCounts.insert(arguments.functionName,0);
+		}
+		request.funcCounts[arguments.functionName] = request.funcCounts[arguments.functionName] + 1
+	}
+
+
 
 	public function onMissingMethod(missingMethodName, missingMethodArguments)
 	{	
@@ -69,33 +162,48 @@ component output="false" displayname=""  accessors="true" extends="" {
 	{
 
 		writeLog(file="mock",text="CALL #variables.objectName#.#arguments.missingMethodName#");
-		try {
-
-			
+		try {			
 
 			//Look for any after function in the spec and call it if it exists
 			local.spec = "";
 			include template="#variables.contextInfo.specPath#";
+			local.specTest = local.spec.tests[variables.contextInfo.functionName];
 			local.specContext = local.spec.tests[variables.contextInfo.functionName][variables.contextInfo.scenarioName];
 			
-			//Call any after functions for this collaborator specification
-			if(structKeyExists(local.specContext,"before"))
-			{
-				//If the before is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
-				if(isClosure(local.specContext.before))
-				{
-					local.specContext.before(variables.object);	
-				}
-				else if(isStruct(local.specContext.before))
-				{
-					if(structKeyExists(local.specContext.before,"unit") AND variables.depth IS 1)
-					{
-						local.specContext.before.unit(variables.object);
-					}
-				}
-				
-			}
+			/*Set each of the levels of tests into an arry. We will use this to loop over each level, checking 
+			for the existense of the function
+			*/
+			local.specLevels = [local.spec.tests, //This is the "tests" level and applys to all tests + scenarios
+								  local.specTest,  //This is the individual test level and applies to all scenarios within the test
+								  local.specContext]; //This is a scenario specific level and only applies to this scenario
 
+
+			/*
+			BEFORE functions
+			
+			For each of the levels, check if the before function exists. If it does, we call it
+			*/
+			for(local.beforeCheck in local.specLevels)
+			{
+				//Call any after functions for this collaborator specification
+				if(structKeyExists(local.beforeCheck,"before"))
+				{
+					//If the before is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
+					if(isClosure(local.beforeCheck.before))
+					{
+						local.beforeCheck.before(variables.object);	
+					}
+					else if(isStruct(local.beforeCheck.before))
+					{
+						if(structKeyExists(local.beforeCheck.before,"unit") AND variables.depth IS 1)
+						{
+							local.beforeCheck.before.unit(variables.object);
+						}
+					}
+					
+				}
+			}
+			
 
 			if(structKeyExists(local.specContext,"given") AND variables.depth IS 1)
 			{
@@ -115,11 +223,11 @@ component output="false" displayname=""  accessors="true" extends="" {
 			}
 
 			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");
-
-			// if(arguments.missingMethodName IS NOT variables.contextInfo.functionName)
-			// {
-			// 	return local.value;
-			// }
+			
+			if(NOT isNull(local.value))
+			{
+				request.testResult = local.value;	
+			}						
 
 			if(NOT isNull(local.value))
 			{
@@ -133,7 +241,8 @@ component output="false" displayname=""  accessors="true" extends="" {
 				local.asserts = local.specContext.then.assert;
 				if(isClosure(local.asserts))
 				{
-					local.result = local.asserts(local.value,variables.object);
+					local.result = local.asserts(((isNull(local.value))?"NULL":local.value),variables.object);
+
 					if(local.result IS false)
 					{
 						throw(message="The assertion failed");
@@ -158,54 +267,71 @@ component output="false" displayname=""  accessors="true" extends="" {
 									throw(message="#assert.message#");
 								}
 							}	
-						}					
+						}									
 					}
 				}
 			}
 
-			//Call any after functions for this collaborator specification
-			if(structKeyExists(local.specContext,"after"))
+			for(local.afterCheck in local.specLevels)
 			{
-				//If the after is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
-				if(isClosure(local.specContext.after))
+				if(structKeyExists(local.afterCheck,"after"))
 				{
-					local.specContext.after(variables.object);	
-				}
-				else if(isStruct(local.specContext.after))
-				{
-					if(structKeyExists(local.specContext.after,"unit") AND variables.depth IS 1)
+
+					//If the after is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
+					if(isClosure(local.afterCheck.after))
 					{
-						local.specContext.after.unit(variables.object);
+						afterMeta = getMetaData(local.afterCheck.after);
+						args = {}
+						for(param in afterMeta.parameters)
+						{
+							if(param.name IS "result") { args.result = local.value }
+							if(param.name IS "object") { args.object = variables.object }
+						}
+
+						local.afterCheck.after(argumentCollection=args);
+					}
+					else if(isStruct(local.afterCheck.after))
+					{
+						if(structKeyExists(local.afterCheck.after,"unit") AND variables.depth IS 1)
+						{
+							local.afterCheck.after.unit(variables.object);
+						}
 					}
 				}
-			}
 
-			
+			}
 			
 		}
 		catch(any e) {
 			local.name = getMetaData(variables.object).fullName;
 			writeLog(file="mock",text="There was an error in the collaborator #local.name#, parent was #variables.parentName#");
-			if(e.message CONTAINS "There was an error in the collaborator")
+
+			//Call any after functions for this collaborator specification
+			if(structKeyExists(local.specContext,"then") AND local.specContext.then.returns IS "isError")
 			{
-				rethrow;
-				
-			} else
-			{
-				local.name = getMetaData(variables.object).fullName;
-				if(variables.parentName IS "root")
-				{
-					e.message = e.message;
-				}
-				else{
-					e.message = "There was an error in the collaborator #local.name#, parent was #variables.parentName#. Message Is: " & e.message;
-				}
-				
-				throw(e);
+				return true;
 			}
-			
-			
+			else
+			{
+				if(e.message CONTAINS "There was an error in the collaborator")
+				{					
+					rethrow;					
+				} 
+				else
+				{					
+					local.name = getMetaData(variables.object).fullName;
+					if(variables.parentName IS "root")
+					{
+						e.message = e.message;
+					}
+					else{						
+						e.message = "There was an error in the collaborator #local.name#, parent was #variables.parentName#. Message Is: " & e.message;						
+					}					
+					throw(e);
+				}
+			}						
 		}
+
 		if(NOT isNull(local.value))
 		{
 			return local.value;	

@@ -24,18 +24,27 @@ component extends="mxunit.framework.testCase" {
 		}
 	}
 
-	private function executeSQL(required string SQLString)
+	private function executeSQL(required string SQLString, datasource="")
 	{
-		return genericQuery(arguments.SQLString);
+		return genericQuery(arguments.SQLString,arguments.datasource);
 	}
 
-	private function genericQuery(required string SQLString){
+	private function genericQuery(required string SQLString, datasource){		
 		
 		local.result = true;
-		query name="local.result"{
-			echo("#arguments.sqlString#");
+		if(structKeyExists(arguments,"datasource") AND trim(arguments.datasource) IS NOT "")
+		{
+			query name="local.result" datasource="#arguments.datasource#"{
+				echo("#arguments.sqlString#");
+			}
 		}
-		return local.result
+		else
+		{
+			query name="local.result"{
+				echo("#arguments.sqlString#");
+			}
+		}		
+		return local.result;
 	}
 	
 }

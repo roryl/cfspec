@@ -14,8 +14,7 @@ component output="false" displayname=""  {
 		request.mockDepth++;
 		
 		//Set the current depth into the local scope so that we can pass it to the mockProxy later on
-		local.mockDepth = request.mockDepth;
-
+		local.mockDepth = request.mockDepth;		
 
 		//Save the spec context info into an easily passable structure which is used in many places
 		local.contextInfo = {
@@ -29,10 +28,13 @@ component output="false" displayname=""  {
 
 		//Check if the object passed in is already a mockProxy object. If it is, then we want to get the object out of the proxy so that we can mock another method
 		
-		if(getMetaData(local.object).fullName CONTAINS "mockProxy")
-		{
-			local.object = local.object.getObject();
-		}
+		// if(getMetaData(local.object).fullName CONTAINS "mockProxy")
+		// {
+		// 	local.object = local.object.getObject();
+		// }
+
+		local.proxy = createObject("mock.mockProxy").create(object=local.object,parentName=arguments.parentName,mockDepth=local.mockDepth,contextInfo=local.contextInfo);
+		//writeDump(local.result);
 
 		//Ensure that the function call that we are making on the collaborator is a public function
 		makeFunctionPublic(local.object,arguments.functionName);
@@ -44,10 +46,9 @@ component output="false" displayname=""  {
 		mockBuilder for every mimic mock that exists
 		*/
 		if(structKeyExists(local.specContext,"with"))
-		{
-			
+		{	
 			//Mock out the collaborators for the ojbect
-			local.object = new mock.mockCollaborators(object=local.object,											  
+			local.object = new mock.mockCollaborators(object=local.object,										 
 													  contextInfo=local.contextInfo);
 		}
 		
@@ -59,7 +60,7 @@ component output="false" displayname=""  {
 			local.object = new mock.mockState(object=local.object,
 											  context=local.specContext,
 											  contextInfo=local.contextInfo);
-		}
+		}		
 		
 		/* Wrap the object in a proxy method so that we can introspect the arguments and return values
 		of a function call */

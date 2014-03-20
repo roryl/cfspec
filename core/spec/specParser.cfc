@@ -18,7 +18,7 @@ component {
 	}
 
 	public function parseSpec(required filePath, outputPath)
-	{
+	{		
 		var specFileName = listGetAt(arguments.filePath,listLen(arguments.filePath,"/"),"/");
 		var componentUnderTestDirectoryPath = replace(arguments.filePath,specFileName,"");
 		var componentUnderTestFileName = replace(specFileName,".spec","");
@@ -136,7 +136,7 @@ component {
 			nl()
 				//Component Body
 				tab(1)
-				o('public function setup(){')
+				o('public function beforeTests(){')
 					tab(2);
 					o('var spec = "";');
 					o('/*We need to import the spec in order to call the setup function because any functions within the spec')
@@ -154,7 +154,10 @@ component {
 					o('}')
 					nl()
 
+
+
 				var metaData = getComponentMetaData(spec.class);
+
 				
 				//If the spec describes a persistent entity, then we can automatically build out tests to test the 
 				//entity methods
@@ -245,6 +248,11 @@ component {
 					
 				for(var name in spec.tests)//For each of the tested functions defined in the specification
 				{
+
+					if(name IS "setup" OR name IS "before" OR name IS "after" OR name IS "factory"){
+						continue;	
+					}
+					
 					//IF there was a setup function specified, it was used above. But now we need to delete it as we don't need it for the tests
 					if(structKeyExists(spec.tests[name],"setup"))
 					{
@@ -256,35 +264,75 @@ component {
 					else{
 						var func = spec.tests[name];
 					}			
-					
+
 					for(var context in func)//For each of the contexts for this function that we are testing
 					{
+						//Skip any before contexts as they should not be called
+						if(context IS "before" OR
+						   context IS "after"){
+							continue;	
+						}
+
 						var clean = replace(context," ","_","all");//Clean up the name so that we can use it
 
 						o('public function #name#_#clean#(){');
 						//Function body	
 						tab(2);
 							o('request.mockDepth = 0');
+							o('request.funcCounts = {}');
 
-
-						if(structKeyExists(spec.tests[name],"setup"))
+						//Setup at the all tests level
+						if(structKeyExists(spec.tests,"setup"))
 						{
-
 							o('//Get the setup function for the test')
-							o('var testSetup = variables.spec.tests.#name#.setup')
+							o('var allTestsSetup = variables.spec.tests.setup')
 							o('//Call the setup function for the test')
-							o('testSetup()')
-							
+							o('allTestsSetup()')							
 						}
 
+						//Setup at the specific function test level
+						if(structKeyExists(spec.tests[name],"setup"))
+						{
+							o('//Get the setup function for the test')
+							o('var functionTestSetup = variables.spec.tests.#name#.setup')
+							o('//Call the setup function for the test')
+							o('functionTestSetup()')							
+						}
+
+						//Setup at the context level
+						if(structKeyExists(spec.tests[name][context],"setup"))
+						{
+							o('//Get the setup function for the test')
+							o('var contextTestSetup = variables.spec.tests.#name#["#context#"].setup')
+							o('//Call the setup function for the test')
+							o('contextTestSetup()')
+						}
+
+						/* FACTORY - We only want to call the factory once. As such, we check each 
+						level, starting from the scenario. If it has a factory, we use it. If not, we check the level
+						higher. If we do not find a factory, then we generate the object like normal*/
 		
-						if(structKeyExists(spec,"factory"))							
+						if(structKeyExists(spec.tests[name][context],"factory"))
+						{
+							o('//A factory was defined in the test and so we call it. The factory is defined if the component under test has a special creation routine other than just "new"')
+							o('var test = variables.spec.tests["#name#"]["#context#"].factory();')
+						}
+						else if(structKeyExists(spec.tests[name],"factory"))
+						{
+							o('//A factory was defined in the test and so we call it. The factory is defined if the component under test has a special creation routine other than just "new"')
+							o('var test = variables.spec.tests["#name#"].factory();')
+						}
+						else if(structKeyExists(spec.tests,"factory"))
+						{
+							o('//A factory was defined in the test and so we call it. The factory is defined if the component under test has a special creation routine other than just "new"')
+							o('var test = variables.spec.tests.factory();')
+						}
+						else if(structKeyExists(spec,"factory"))
 						{
 							o('//A factory was defined in the test and so we call it. The factory is defined if the component under test has a special creation routine other than just "new"')
 							o('var test = variables.spec.factory();')
 						}
-						else
-						{
+						else{
 							if(name IS "init") //Functions that we are testing with the name init, need to be created with createObject or the init() will be called prematurely
 							{
 								o('//Create the object that needs to be called')
@@ -295,8 +343,8 @@ component {
 								o('//Create the object that needs to be called')
 								o('var test = new #spec.class#()')
 							}
-							
 						}
+						
 						
 						o('//Set the portion of the spec under test into the the test object so that we can use any values within the spec within the scope of the component under test')
 						o('test.setSpec = function(spec){')
@@ -379,6 +427,10 @@ component {
 										o('var type = getType.init(testResult)')
 										o('assert(type IS "#compareType#","The result from the function call #name# was of type ##type## but the specification expected to return a #compareType#")')	
 									}
+									else if(facts[fact] CONTAINS "isError") //If we are expecting an error, then the mockProxy will return true if the error happened
+									{
+										o('assert(testResult)');
+									}
 									else if(facts[fact] CONTAINS "isNotDefined")
 									{
 										o('assert(NOT isDefined("testResult"))');
@@ -386,8 +438,7 @@ component {
 									else
 									{
 										o('assert(testResult IS assertValue,"The result from the function call #name# returned the value ##testResult## but the specification expected the value ##assertValue##")')
-									}
-									
+									}									
 									
 								}
 								/*else if(fact IS "assert")
@@ -442,6 +493,26 @@ component {
 
 						nl();
 					tab();
+
+				//Component Body
+				tab(1)
+				o('public function afterTests(){')
+					tab(2);
+					o('var spec = "";');
+					o('/*We need to import the spec in order to call the setup function because any functions within the spec')
+					o('dont seem to return unless they are loaded within the scope of the caller*/')
+					o('include template="#variables.specFilePath#";')
+					o('variables.spec = spec')
+
+					//If There is a setup function defined in the spec
+					if(structKeyExists(spec,"tearDown"))
+					{
+						o('//Call the setup function that is defined in the spec')
+						o('spec.tearDown();')
+					}
+					tab(0);tab(1);
+					o('}')
+					nl();
 					
 			nl();
 			echo('}');//Ending component Tag
@@ -450,14 +521,15 @@ component {
 		}
 		catch(any e){
 			//writeDump(entityName);
-			//writeDump(metaData);
-			//writeDump(spec);
+			writeDump(arguments);
+			writeDump(spec);
 			writeDump(e);
+			abort;
 		}
 
 		//Get the file path by first removing the last element
 		
-		fileWrite(arguments.compilePath,output);
+		fileWrite(arguments.compilePath,local.output);
 		return spec;
 	}
 

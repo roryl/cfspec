@@ -13,7 +13,7 @@ component output="false" displayname=""  {
 
 		local.object = arguments.object;
 		local.object.mockCollaboratorFunction = this.mockCollaboratorFunction;
-		
+
 		//Get the collaborators from the spec
 		local.spec = "";
 		include template="#arguments.contextInfo.specPath#";
@@ -23,7 +23,7 @@ component output="false" displayname=""  {
 		//For each collaborator, mock out the collaborator
 		for(local.collaborator in local.collaborators)
 		{
-		
+				
 				local.collaboratorObject = listFirst(local.collaborator,".");
 				local.collaboratorFunction = listLast(local.collaborator,".");
 				local.object.mockCollaboratorFunction(collaborator=local.collaboratorObject,
@@ -43,14 +43,14 @@ component output="false" displayname=""  {
 
 		//Get the value of the specification document
 		local.mockValue = spec.tests[arguments.contextInfo.functionName][arguments.contextInfo.scenarioName].with["#arguments.collaborator#.#arguments.functionName#"];
-
+		
 		/*
 		Collaborators can either be in the component under test or a dependency within the variables scope. Look
 		at the collaborator value passed in and create a refernece to that object
 		*/
 		if(arguments.collaborator IS "this"){
 			local.collaboratorReference = this;
-		} else {
+		} else {			
 			local.collaboratorReference = variables[collaborator]
 		}			
 		/*
@@ -93,9 +93,9 @@ component output="false" displayname=""  {
 				functionName = arguments.functionName,
 				scenarioName = local.mockValue.mimic,
 				parentName = arguments.parentName
-			}			
-			
-			local.collaboratorReference = new cfspec.core.spec.mockBuilderNew(argumentCollection=local.contextInfo);			
+			}
+
+			local.collaboratorReference = new cfspec.core.spec.mockBuilderNew(argumentCollection=local.contextInfo);					
 
 		}
 
@@ -104,6 +104,18 @@ component output="false" displayname=""  {
 		{
 
 			local.collaboratorReference[arguments.functionName] = local.mockValue;
+
+			//Copy the mockProxy's utility functions into the scope of the component so that any calls within this function can access them
+			local.utilities = new mockUtilities();
+			local.collaboratorReference.executeSQL = local.utilities.executeSQL;
+			local.collaboratorReference.genericQuery = local.utilities.genericQuery;
+
+			local.collaboratorReference.setFunctionsLocal = function(){
+				variables.executeSQL = this.executeSQL;
+				variables.genericQuery = this.genericQuery;
+			}
+			local.collaboratorReference.setFunctionsLocal();
+
 		}
 
 		//3. VALUE
