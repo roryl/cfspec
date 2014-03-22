@@ -18,7 +18,8 @@ component {
 	}
 
 	public function parseSpec(required filePath, outputPath)
-	{		
+	{	
+		writeLog(file="cfspec",text="Start parseSpec");
 		var specFileName = listGetAt(arguments.filePath,listLen(arguments.filePath,"/"),"/");
 		var componentUnderTestDirectoryPath = replace(arguments.filePath,specFileName,"");
 		var componentUnderTestFileName = replace(specFileName,".spec","");
@@ -36,12 +37,13 @@ component {
 		variables.specFilePath=arguments.filePath;
 		var spec = "";
 		include template="#variables.specFilePath#";
+		writeLog(file="cfspec",text="End parseSpec");
 		return _parseSpec(spec,finalCompilePath);
 	}
 
 	public function parseAllSpecs(required specDirectory, required outputPath)
 	{
-
+		writeLog(file="cfspec",text="Start parseAllSpecs");
 		if(structKeyExists(url,"reloadFiles") OR NOT structKeyExists(application,"specFiles"))
 		{
 			application.specFiles = getSpecFiles(arguments.specDirectory,"*.spec");	
@@ -59,11 +61,12 @@ component {
 			}
 			
 		}
-		
+		writeLog(file="cfspec",text="End parseAllSpecs");
 		return application.specFiles;
 	}
 
 	private function getSpecFiles(required mapping,required filter){
+		writeLog(file="cfspec",text="Start getSpecFiles");
 		var output = [];
 
 		files = directoryList(expandPath(arguments.mapping),true,"query",arguments.filter);	
@@ -78,13 +81,13 @@ component {
 			arrayAppend(output,{file=template,path="#mapping##finalPath#/#template#"});
 			//output[template].path = "#mapping##finalPath#/#template#";
 		}
-		
+		writeLog(file="cfspec",text="End getSpecFiles");
 		return output;
 	}
 
 	private function _parseSpec(specObject,compilePath){
 		
-
+		writeLog(file="cfspec",text="Start _parseSpec");
 		/* 	Design Notes:
 			
 				The compiler generates output to create the MXunit test case, mock out the dependencies and functions under test, and test the methods. There
@@ -528,7 +531,7 @@ component {
 		}
 
 		//Get the file path by first removing the last element
-		
+		writeLog(file="cfspec",text="End _parseSpec");
 		fileWrite(arguments.compilePath,local.output);
 		return spec;
 	}
