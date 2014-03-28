@@ -7,7 +7,7 @@
 			local.spec = "";
 			include template="/cfspec/core/tests/collaboratorTests.spec";
 			local.tests = local.spec.tests;
-			return createObject("component","cfspec.core.spec.reader.tests").init(spec=specObject,tests=local.tests);
+			return createObject("component","cfspec.core.spec.reader.tests").init(specObject=specObject,tests=local.tests);
 		},
 		tests:{
 			init:{
@@ -18,7 +18,7 @@
 						include template="/cfspec/core/tests/collaboratorTests.spec";
 						local.tests = local.spec.tests;
 						return {
-							spec:specObject,
+							specObject:specObject,
 							tests:local.tests
 						}
 					},

@@ -307,9 +307,27 @@ component {
 						{
 							o('//Get the setup function for the test')
 							o('var contextTestSetup = variables.spec.tests.#name#["#context#"].setup')
-							o('//Call the setup function for the test')
+							o('//Call the setup function for the test');
+							
 							o('contextTestSetup()')
 						}
+
+						/* Manual MXUnit Test Override - There are some instances where we cannot use the
+						cfspec testing libary to finish the test. (like when testing aspects of the testing framework itself)
+						In these instances we can override the normal test paramters and prive a fully completed
+						function which will be run to test
+						*/
+						if(structKeyExists(spec.tests[name][context],"mxunit"))
+						{
+							o('//Get the only test function for this test')
+							o('var mxUnitOverride = variables.spec.tests.#name#["#context#"].mxUnit')
+							o('//Call the mxunit test function')
+							o('mxUnitOverride();')
+							tab("-1");
+							o('}');
+							continue;
+						}
+
 
 						/* FACTORY - We only want to call the factory once. As such, we check each 
 						level, starting from the scenario. If it has a factory, we use it. If not, we check the level

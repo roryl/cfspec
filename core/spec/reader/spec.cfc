@@ -32,7 +32,7 @@ component accessors="true"  {
 		{
 			variables.specSchema = arguments.spec;
 		}
-		variables.testsService = new tests(spec=this,tests=variables.specSchema.tests);	
+		variables.testsService = new tests(specObject=this,tests=variables.specSchema.tests);	
 		//variables.scenariosService = new scenarios(spec)
 		return this;
 	}
@@ -44,7 +44,7 @@ component accessors="true"  {
 
 	public function getTests()
 	{
-		return new tests(spec=this,tests=variables.specSchema.tests);
+		return new tests(specObject=this,tests=variables.specSchema.tests);
 	}
 
 	public function getAllTests(){

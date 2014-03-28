@@ -17,8 +17,8 @@ component output="false" displayname="" {
 	}
 
 	public struct function getComplexValue(){
-		sleep(2000);
-		throw("an error today");
+		//sleep(2000);
+		//throw("an error today");
 		writeLog(file="mock",text="CALLED CollaboratorC.getComplexValue()");
 		return {test:"value",test2:"value2",test3:"value3"}
 	}

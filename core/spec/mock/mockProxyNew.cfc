@@ -161,6 +161,58 @@ component output="false" displayname=""  accessors="true" extends="" {
 		
 	}
 
+	private function doGiven(required specContext, required mockDepth, required missingMethodArguments){
+
+		if(structKeyExists(arguments.specContext,"given") AND arguments.mockDepth IS 1)
+		{
+			if(isClosure(arguments.specContext.given))
+			{
+				request.given = arguments.specContext.given(variables.object);		
+			}
+			else
+			{
+				request.given = arguments.specContext.given;
+			}
+			local.given = request.given;
+		}
+		else
+		{
+
+			local.given = arguments.missingMethodArguments;
+		}
+		return local.given;
+	}
+
+	private function doBefore(required specLevels)
+	{
+		/*
+		BEFORE functions
+		
+		For each of the levels, check if the before function exists. If it does, we call it
+		*/
+		for(local.beforeCheck in arguments.specLevels)
+		{
+			//Call any after functions for this collaborator specification
+			if(structKeyExists(local.beforeCheck,"before"))
+			{
+				//If the before is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
+				if(isClosure(local.beforeCheck.before))
+				{
+					local.beforeCheck.before(variables.object);	
+				}
+				else if(isStruct(local.beforeCheck.before))
+				{
+					if(structKeyExists(local.beforeCheck.before,"unit") AND variables.depth IS 1)
+					{
+						local.beforeCheck.before.unit(variables.object);
+					}
+				}
+				
+			}
+		}
+	}
+
+
 	private function tryFunctionCall(missingMethodName, missingMethodArguments)
 	{
 
@@ -181,49 +233,13 @@ component output="false" displayname=""  accessors="true" extends="" {
 								  local.specContext]; //This is a scenario specific level and only applies to this scenario
 
 
-			/*
-			BEFORE functions
+			doBefore(local.specLevels);
 			
-			For each of the levels, check if the before function exists. If it does, we call it
-			*/
-			for(local.beforeCheck in local.specLevels)
-			{
-				//Call any after functions for this collaborator specification
-				if(structKeyExists(local.beforeCheck,"before"))
-				{
-					//If the before is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
-					if(isClosure(local.beforeCheck.before))
-					{
-						local.beforeCheck.before(variables.object);	
-					}
-					else if(isStruct(local.beforeCheck.before))
-					{
-						if(structKeyExists(local.beforeCheck.before,"unit") AND variables.depth IS 1)
-						{
-							local.beforeCheck.before.unit(variables.object);
-						}
-					}
-					
-				}
-			}
+			//Obtain the arguments to be passed into the function
+			local.given = doGiven(local.specContext,
+								  variables.depth,
+								  arguments.missingMethodArguments);
 			
-
-			if(structKeyExists(local.specContext,"given") AND variables.depth IS 1)
-			{
-				if(isClosure(local.specContext.given))
-				{
-					request.given = local.specContext.given(variables.object);		
-				}
-				else
-				{
-					request.given = local.specContext.given;
-				}
-				local.given = request.given;
-			}
-			else
-			{
-				local.given = arguments.missingMethodArguments;
-			}
 
 			
 			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");	
