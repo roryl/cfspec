@@ -222,8 +222,16 @@ component output="false" displayname=""  accessors="true" extends="" {
 				local.given = arguments.missingMethodArguments;
 			}
 
-			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");
 			
+			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");	
+
+			//If we got to this point, then the call worked, so check if the specification expected and error and if so, throw that error. 
+			if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws"))
+			{
+				throw("The specification expected an error but did not receive one. The specification exptected the error to contain: ""#local.specContext.then.throws#""");
+			}
+			
+
 			if(NOT isNull(local.value))
 			{
 				request.testResult = local.value;	
@@ -242,6 +250,11 @@ component output="false" displayname=""  accessors="true" extends="" {
 				if(isClosure(local.asserts))
 				{
 					local.result = local.asserts(((isNull(local.value))?"NULL":local.value),variables.object);
+
+					if(NOT isDefined('local.result'))
+					{
+						throw("Your test assertion must return either true for success or false for a failure");
+					}
 
 					if(local.result IS false)
 					{
@@ -305,6 +318,20 @@ component output="false" displayname=""  accessors="true" extends="" {
 		catch(any e) {
 			local.name = getMetaData(variables.object).fullName;
 			writeLog(file="mock",text="There was an error in the collaborator #local.name#, parent was #variables.parentName#");
+
+			if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws") AND e.message CONTAINS local.specContext.then.throws)
+			{
+				return true;
+			}
+			else if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws"))
+			{
+				throw("The specification expected an error but the error returned was not of the correct text. The error returned was: ""#e.message#"" <br />");
+			}
+
+			if(structKeyExists(local.specContext,"onError") AND isClosure(local.specContext.onError))
+			{
+				local.specContext.onError();				
+			}	
 
 			//Call any after functions for this collaborator specification
 			if(structKeyExists(local.specContext,"then") AND local.specContext.then.returns IS "isError")

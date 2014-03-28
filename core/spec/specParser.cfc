@@ -438,6 +438,10 @@ component {
 									{
 										o('assert(NOT isDefined("testResult"))');
 									}
+									else if(facts[fact] CONTAINS "any")
+									{
+										o('//Spec allows return type of any, so do nothing');
+									}
 									else
 									{
 										o('assert(testResult IS assertValue,"The result from the function call #name# returned the value ##testResult## but the specification expected the value ##assertValue##")')

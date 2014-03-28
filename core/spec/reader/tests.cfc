@@ -11,10 +11,10 @@ component accessors="true" {
 	property name="tests" hint="The struct of the tests";
 
 
-	public function init(required spec spec, required struct tests){
-
-		variables.tests = arguments.tests;
-		variables.specObject = arguments.spec;
+	public function init(required specObject, required struct tests){
+		
+		variables.tests = arguments.tests;		
+		variables.specObject = arguments.specObject;
 		return this;
 	}
 
@@ -33,11 +33,13 @@ component accessors="true" {
 
 	public function getAllTests()
 	{
+		
 		local.tests = [];
 		for(local.test in variables.tests)
 		{
-			local.testStruct = structNew();
-			local.testStruct.insert(local.test,variables.tests[local.test]);
+			local.testStruct = structNew();			
+
+			local.testStruct.insert(local.test,variables.tests[local.test]);			
 			local.tests.append(new test(variables.specObject,local.testStruct));			
 		}
 		return local.tests;
