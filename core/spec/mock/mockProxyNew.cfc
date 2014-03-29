@@ -161,6 +161,10 @@ component output="false" displayname=""  accessors="true" extends="" {
 		
 	}
 
+	/**
+	* doGiven checks and runs the given clause from the specification. Currently only a scenario 
+	* can contain the given clause
+	*/
 	private function doGiven(required specContext, required mockDepth, required missingMethodArguments){
 
 		if(structKeyExists(arguments.specContext,"given") AND arguments.mockDepth IS 1)
@@ -183,6 +187,9 @@ component output="false" displayname=""  accessors="true" extends="" {
 		return local.given;
 	}
 
+	/**
+	* doBefore checks and runs the before clauses from the specification. 
+	*/
 	private function doBefore(required specLevels)
 	{
 		/*
@@ -212,6 +219,134 @@ component output="false" displayname=""  accessors="true" extends="" {
 		}
 	}
 
+	/**
+	* doAsserts checks and runs the assert clauses from the specification. 
+	*/
+	private function doAsserts(required specContext, result, required objectUnderTest)
+	{
+		//Call any assert statements for this specification
+		if(structKeyExists(arguments.specContext,"then") AND structKeyExists(arguments.specContext.then,"assert"))
+		{	
+			local.asserts = arguments.specContext.then.assert;
+			if(isClosure(local.asserts))
+			{
+				local.result = local.asserts(((isNull(arguments.result))?"NULL":arguments.result),arguments.objectUnderTest);
+
+				if(NOT isDefined('local.result'))
+				{
+					throw("Your test assertion must return either true for success or false for a failure");
+				}
+
+				if(local.result IS false)
+				{
+					throw(message="The assertion failed");
+				}
+			}
+			else if(isArray(local.asserts))
+			{
+				for(assert in asserts)
+				{					
+					if(isStruct(assert))
+					{
+						if(isClosure(assert.value))
+						{
+							local.result = assert.value(arguments.result,arguments.objectUnderTest);
+
+							if(NOT isDefined('local.result'))
+							{
+								throw("Your test assertion must return either true for success or false for a failure");
+							}
+
+							if(local.result IS false)
+							{
+								throw(message="#assert.message#");
+							}
+						}	
+					}									
+				}
+			}
+		}
+	}
+
+	/**
+	* doAfter calls any acter clauses in any of the spec levels, in the following order: 
+	* All Tests > Test Level > Scenario Level
+	*/
+	private function doAfter(required specLevels, result, required objectUnderTest, required depth){
+
+		for(local.afterCheck in arguments.specLevels)
+		{
+			if(structKeyExists(local.afterCheck,"after"))
+			{
+				//If the after is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
+				if(isClosure(local.afterCheck.after))
+				{
+					afterMeta = getMetaData(local.afterCheck.after);
+					args = {}
+					for(param in afterMeta.parameters)
+					{
+						if(param.name IS "result" AND isDefined('arguments.result')) { args.result = arguments.result }
+						if(param.name IS "object") { args.object = arguments.objectUnderTest }
+					}
+
+					local.afterCheck.after(argumentCollection=args);
+				}
+				else if(isStruct(local.afterCheck.after))
+				{
+					if(structKeyExists(local.afterCheck.after,"unit") AND arguments.depth IS 1)
+					{
+						local.afterCheck.after.unit(variables.object);
+					}
+				}
+			}
+
+		}
+	}
+
+	private function doError(required error, required specContext)
+	{
+		local.name = getMetaData(variables.object).fullName;
+		writeLog(file="mock",text="There was an error in the collaborator #local.name#, parent was #variables.parentName#");
+
+		if(structKeyExists(arguments.specContext,"onError") AND isClosure(arguments.specContext.onError))
+		{
+			arguments.specContext.onError();				
+		}
+
+		if(structKeyExists(arguments.specContext,"then") AND structKeyExists(arguments.specContext.then,"throws") AND arguments.error.message CONTAINS arguments.specContext.then.throws)
+		{
+			return true;
+		}
+		else if(structKeyExists(arguments.specContext,"then") AND structKeyExists(arguments.specContext.then,"throws"))
+		{
+			throw("The specification expected an error but the error returned was not of the correct text. The error returned was: ""#arguments.error.message#"" <br />");
+		}		
+
+		//Call any after functions for this collaborator specification
+		if(structKeyExists(arguments.specContext,"then") AND arguments.specContext.then.returns IS "isError")
+		{
+			return true;
+		}
+		else
+		{
+			if(arguments.error.message CONTAINS "There was an error in the collaborator")
+			{					
+				//rethrow;					
+			} 
+			else
+			{					
+				arguments.name = getMetaData(variables.object).fullName;
+				if(variables.parentName IS "root")
+				{
+					arguments.error.message = arguments.error.message;
+				}
+				else{						
+					arguments.error.message = "There was an error in the collaborator #arguments.name#, parent was #variables.parentName#. Message Is: " & arguments.error.message;						
+				}					
+				throw(error);
+			}
+		}	
+	}
 
 	private function tryFunctionCall(missingMethodName, missingMethodArguments)
 	{
@@ -226,7 +361,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 			local.specContext = local.spec.tests[variables.contextInfo.functionName][variables.contextInfo.scenarioName];
 			
 			/*Set each of the levels of tests into an arry. We will use this to loop over each level, checking 
-			for the existense of the function
+			for the existense of the function. These will be passed to doBefore and doAfter
 			*/
 			local.specLevels = [local.spec.tests, //This is the "tests" level and applys to all tests + scenarios
 								  local.specTest,  //This is the individual test level and applies to all scenarios within the test
@@ -235,147 +370,55 @@ component output="false" displayname=""  accessors="true" extends="" {
 
 			doBefore(local.specLevels);
 			
+
 			//Obtain the arguments to be passed into the function
 			local.given = doGiven(local.specContext,
 								  variables.depth,
 								  arguments.missingMethodArguments);
-			
 
-			
+			//Pass the arguments into the method being called under test			
 			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");	
 
 			//If we got to this point, then the call worked, so check if the specification expected and error and if so, throw that error. 
 			if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws"))
 			{
 				throw("The specification expected an error but did not receive one. The specification exptected the error to contain: ""#local.specContext.then.throws#""");
-			}
-			
+			}			
+
 
 			if(NOT isNull(local.value))
 			{
-				request.testResult = local.value;	
+				//set request.testResult to the local value. This is a deprecated function and is no longer how we generally assert values
+				request.testResult = local.value;
+
+				//Save the value to the cache so that if this method is called again, the value can be retreived from the cache
+				variables.cache.cachePut(local.value,"#variables.objectName#_#arguments.missingMethodName#");	
 			}						
 
+			doAsserts(local.specContext,
+					  local.value,
+					  variables.object);
+
+			/*doAfter arguments 
+			Set the arguments into a collection. Then we need to check if the value was null, and if it was not, then we can
+			pass it. 
+			*/
+			local.doAfterArgs = {
+				specLevels:local.specLevels,
+				objectUnderTest:variables.object,
+				depth:variables.depth				
+			}
+
 			if(NOT isNull(local.value))
 			{
-				variables.cache.cachePut(local.value,"#variables.objectName#_#arguments.missingMethodName#");	
+				local.doAfterArgs.result = local.value;
 			}
 
-			//Call any assert statements for this specification
-			if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"assert"))
-			{	
-
-				local.asserts = local.specContext.then.assert;
-				if(isClosure(local.asserts))
-				{
-					local.result = local.asserts(((isNull(local.value))?"NULL":local.value),variables.object);
-
-					if(NOT isDefined('local.result'))
-					{
-						throw("Your test assertion must return either true for success or false for a failure");
-					}
-
-					if(local.result IS false)
-					{
-						throw(message="The assertion failed");
-					}
-				}
-				else if(isArray(local.asserts))
-				{
-					for(assert in asserts)
-					{
-						if(isSimpleValue(assert))
-						{
-
-						}
-						else if(isStruct(assert))
-						{
-
-							if(isClosure(assert.value))
-							{
-								local.result = assert.value(local.value,variables.object);
-								if(local.result IS false)
-								{
-									throw(message="#assert.message#");
-								}
-							}	
-						}									
-					}
-				}
-			}
-
-			for(local.afterCheck in local.specLevels)
-			{
-				if(structKeyExists(local.afterCheck,"after"))
-				{
-
-					//If the after is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
-					if(isClosure(local.afterCheck.after))
-					{
-						afterMeta = getMetaData(local.afterCheck.after);
-						args = {}
-						for(param in afterMeta.parameters)
-						{
-							if(param.name IS "result") { args.result = local.value }
-							if(param.name IS "object") { args.object = variables.object }
-						}
-
-						local.afterCheck.after(argumentCollection=args);
-					}
-					else if(isStruct(local.afterCheck.after))
-					{
-						if(structKeyExists(local.afterCheck.after,"unit") AND variables.depth IS 1)
-						{
-							local.afterCheck.after.unit(variables.object);
-						}
-					}
-				}
-
-			}
+			doAfter(argumentCollection=local.doAfterArgs);			
 			
 		}
 		catch(any e) {
-			local.name = getMetaData(variables.object).fullName;
-			writeLog(file="mock",text="There was an error in the collaborator #local.name#, parent was #variables.parentName#");
-
-			if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws") AND e.message CONTAINS local.specContext.then.throws)
-			{
-				return true;
-			}
-			else if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws"))
-			{
-				throw("The specification expected an error but the error returned was not of the correct text. The error returned was: ""#e.message#"" <br />");
-			}
-
-			if(structKeyExists(local.specContext,"onError") AND isClosure(local.specContext.onError))
-			{
-				local.specContext.onError();				
-			}	
-
-			//Call any after functions for this collaborator specification
-			if(structKeyExists(local.specContext,"then") AND local.specContext.then.returns IS "isError")
-			{
-				return true;
-			}
-			else
-			{
-				if(e.message CONTAINS "There was an error in the collaborator")
-				{					
-					rethrow;					
-				} 
-				else
-				{					
-					local.name = getMetaData(variables.object).fullName;
-					if(variables.parentName IS "root")
-					{
-						e.message = e.message;
-					}
-					else{						
-						e.message = "There was an error in the collaborator #local.name#, parent was #variables.parentName#. Message Is: " & e.message;						
-					}					
-					throw(e);
-				}
-			}						
+			doError(e,local.specContext);
 		}
 
 		if(NOT isNull(local.value))

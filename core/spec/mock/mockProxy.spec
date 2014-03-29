@@ -139,7 +139,7 @@
 				setup:function(){
 					makePublic(variables.mockProxy,"doBefore");
 				},
-				"Given befores for each level it calls all of them":{
+				"Should call the before function for each level of test granularity":{
 					mxunit:function(){
 
 						//Create some basic structures which contain a before function that will be tested for
@@ -161,10 +161,9 @@
 						structDelete(request,"beforeTests");
 						structDelete(request,"beforeFunc");
 						structDelete(request,"beforeContext");
-
 					}
 				},
-				"Given no befores none of them get called":{
+				"Should not call any before functions if none are provided":{
 					mxunit:function(){
 						//Create some basic empty structures which do not contain before clauses
 						local.specLevels = [
@@ -180,6 +179,384 @@
 						assert(NOT isDefined('request.beforeTests'));
 						assert(NOT isDefined('request.beforeFunc'));
 						assert(NOT isDefined('request.beforeContext'));
+					}
+				}
+			},
+			doAsserts:{
+				setup:function(){
+					makePublic(variables.mockProxy,"doAsserts");
+				},
+				"Should do nothing if the context does not have any asserts":{
+					mxunit:function(){
+						//Setup a spec context without any asserts
+						local.specContext = {
+							given:{},
+							then:{returns:true}
+						}
+
+						local.result = variables.mockProxy.doAsserts(local.specContext,true,variables.mockProxy);
+						assert(isNull(result));
+					}
+				},
+				"Should call the function closure if the assert is a function":{
+					mxunit:function(){
+						//Setup a spec context without any asserts
+						local.specContext = {
+							given:{},
+							then:{
+								returns:true,
+								assert:function(){
+									//Set a variable into the request scope so that we know that this function is Called
+									request.assertCheckWasCalled = true;
+									return true;
+								}
+							}
+						}
+
+						result = variables.mockProxy.doAsserts(local.specContext,true,variables.mockProxy);
+						assert(isNull(result));
+						assert(request.assertCheckWasCalled);
+
+						//Delete the request variable
+						structDelete(request,"assertCheckWasCalled");						
+					}
+				},
+				"Should throw an error if the assert function provided does not return true or false":{
+					mxunit:function(){
+						//Setup a spec context without any asserts
+						local.specContext = {
+							given:{},
+							then:{
+								returns:true,
+								assert:function(){
+									//Do nothing so that the mockProxy returns an error
+								}
+							}
+						}
+
+						try{
+							result = variables.mockProxy.doAsserts(local.specContext,true,variables.mockProxy);	
+						}
+						catch(any e){
+							assert(e.message CONTAINS "Your test assertion must return either");
+						}
+					}
+				},
+				"Should throw a failure if the assert closure returns false":{
+					mxunit:function(){
+						//Setup a spec context without any asserts
+						local.specContext = {
+							given:{},
+							then:{
+								returns:true,
+								assert:function(){
+									//return false to make a assert failure
+									return false;
+								}
+							}
+						}
+
+						try{
+							result = variables.mockProxy.doAsserts(local.specContext,true,variables.mockProxy);	
+						}
+						catch(any e){
+							assert(e.message CONTAINS "The assertion failed");
+						}
+					}
+				},
+				"Should call the closure for each assert if given an array of asserts":{
+					mxunit:function(){
+						//Setup a spec context with an array of assert functions
+						local.specContext = {
+							given:{},
+							then:{
+								returns:true,
+								assert:[									
+									{
+										value:function(){
+											request.checkThatAssertWasCalled = true;
+											return true;
+										},
+										message:"The custom assertion was called"
+									},
+									{
+										value:function(){
+											request.checkThatAssert2WasCalled = true;											
+										},
+										message:"The custom assertion 2 was called"
+									}
+								]
+							}
+						}	
+
+						try {
+							result = variables.mockProxy.doAsserts(local.specContext,true,variables.mockProxy);
+						}
+						catch (any e)
+						{
+							//Assert that the functions themselves were called
+							assert(request.checkThatAssertWasCalled);
+							assert(request.checkThatAssert2WasCalled);
+							
+							//Also assert that the second assert function threw an error because it did not return a value
+							assert(e.message CONTAINS "Your test assertion must return either true for success");
+						}
+
+						//Delete the request variables so that they do not impact other tests
+						structDelete(request,"checkThatAssertWasCalled");
+						structDelete(request,"checkThatAssert2WasCalled");																	
+					}
+				},
+				"Should throw the error message for the assert given an array of asserts":{
+					mxunit:function(){
+						//Setup a spec context with an array of assert functions
+						local.specContext = {
+							given:{},
+							then:{
+								returns:true,
+								assert:[									
+									{
+										value:function(){
+											request.checkThatAssertWasCalled = true;
+											return false;
+										},
+										message:"The custom assertion was called"
+									},
+									{
+										value:function(){
+											request.checkThatAssert2WasCalled = true;	
+											return true										
+										},
+										message:"The custom assertion 2 was called"
+									}
+								]
+							}
+						}	
+
+						try {
+							result = variables.mockProxy.doAsserts(local.specContext,true,variables.mockProxy);
+						}
+						catch (any e)
+						{							
+							//Assert that the functions themselves were called
+							assert(request.checkThatAssertWasCalled);
+
+							//Assert that the second assert did not get called because the first one errored, it never got to this
+							assert(NOT isDefined('request.checkThatAssert2WasCalled'),"request.checkThatAssert2WasCalled was defined");
+							
+							//Also assert that the first assert function threw an error with our custom message because it returned false
+							assert(e.message CONTAINS "The custom assertion was called");
+						}
+																	
+					}
+				}
+			},
+			doAfter:{
+				setup:function(){
+					makePublic(variables.mockProxy,"doAfter");
+				},
+				"Should call the closure and pass the result and object if the closure defines them":{
+					mxunit:function(){
+						//Create some basic structures which contain a after function that will be tested for
+						local.specLevels = [
+							{after:function(result,object){
+									assert(isDefined('arguments.result') AND arguments.result); 
+									assert(isDefined('arguments.object') AND isObject(arguments.object)); 
+									request.afterTests=true
+								}
+							},
+							{after:function(result,object){
+									assert(isDefined('arguments.result') AND arguments.result); 
+									assert(isDefined('arguments.object') AND isObject(arguments.object)); 
+									request.afterFunc=true
+								}
+							},
+							{after:function(result,object){
+									assert(isDefined('arguments.result') AND arguments.result); 
+									assert(isDefined('arguments.object') AND isObject(arguments.object)); 
+									request.afterContext=true
+								}
+							},
+						]
+
+						variables.mockProxy.doAfter(specLevels = local.specLevels,
+													result = true,
+													objectUnderTest = variables.mockProxy,
+													depth = 1);
+
+						assert(isDefined('request.afterTests'));
+						assert(isDefined('request.afterFunc'));
+						assert(isDefined('request.afterContext'));
+
+						//Delete the request variables so that they do not interfere 
+						structDelete(request,"afterTests");
+						structDelete(request,"afterFunc");
+						structDelete(request,"afterContext");
+
+					}
+				},
+				"Should not set the result of the function into the after arguments if it was not passed in":{
+					mxunit:function(){
+						//Create some basic structures which contain a after function that will be tested for
+						local.specLevels = [
+							{after:function(result,object){
+									assert(NOT isDefined('arguments.result')); 
+									assert(isDefined('arguments.object') AND isObject(arguments.object)); 
+									request.afterTests=true
+								}
+							},
+							{after:function(result,object){
+									assert(NOT isDefined('arguments.result')); 
+									assert(isDefined('arguments.object') AND isObject(arguments.object)); 
+									request.afterFunc=true
+								}
+							},
+							{after:function(result,object){
+									assert(NOT isDefined('arguments.result')); 
+									assert(isDefined('arguments.object') AND isObject(arguments.object)); 
+									request.afterContext=true
+								}
+							},
+						]
+
+						variables.mockProxy.doAfter(specLevels = local.specLevels,													
+													objectUnderTest = variables.mockProxy,
+													depth = 1);
+
+						assert(isDefined('request.afterTests'));
+						assert(isDefined('request.afterFunc'));
+						assert(isDefined('request.afterContext'));
+
+						//Delete the request variables so that they do not interfere 
+						structDelete(request,"afterTests");
+						structDelete(request,"afterFunc");
+						structDelete(request,"afterContext");
+
+					}
+				},
+				"Should set the object into the unit test if the after was a struct with a value of unit":{
+					mxunit:function(){
+						//Create some basic structures which contain a after function that will be tested for
+						local.specLevels = [
+							{after:{
+									unit:function(object){										
+										assert(isDefined('arguments.object') AND isObject(arguments.object)); 
+										request.afterTests=true
+									}
+								}
+							},
+							{after:{
+									unit:function(object){										
+										assert(isDefined('arguments.object') AND isObject(arguments.object)); 
+										request.afterFunc=true
+									}
+								}
+							},
+							{after:{
+									unit:function(object){										
+										assert(isDefined('arguments.object') AND isObject(arguments.object)); 
+										request.afterContext=true
+									}
+								}
+							},
+						]
+
+						variables.mockProxy.doAfter(specLevels = local.specLevels,													
+													objectUnderTest = variables.mockProxy,
+													depth = 1);
+
+						assert(isDefined('request.afterTests'));
+						assert(isDefined('request.afterFunc'));
+						assert(isDefined('request.afterContext'));
+
+						//Delete the request variables so that they do not interfere 
+						structDelete(request,"afterTests");
+						structDelete(request,"afterFunc");
+						structDelete(request,"afterContext");
+
+					}
+				}
+			},
+			doError:{
+				setup:function(){
+					makePublic(variables.mockProxy,"doError");
+				},
+				"Should return true if the specification expected a specific error and that error was thrown":{
+					mxunit:function(){
+
+						//Create a specContext with an error to check for being thrown
+						local.specContext = {
+							given:{},
+							then:{
+								throws:"Some error it should throw"
+							}
+						}
+
+						//Now we are going to throw a fake error, change its name to our error message and ensure that the doError 
+						//checks for this and returns true
+						try{
+							throw("some error"); //Throw any error, it doesn't matter
+						} catch(any e) {
+							//Overrite the error message with our test message
+							e.message = local.specContext.then.throws;
+
+							//Pass the value of this to doError
+							doErrorResultShouldBeTrue = variables.mockProxy.doError(e,local.specContext);
+
+							assert(doErrorResultShouldBeTrue);
+						}
+					}
+				},
+				"Should return an error that the throw in the specification did not match the actual error that was returned":{
+					mxunit:function(){
+
+						//Create a specContext with an error to check for being thrown
+						local.specContext = {
+							given:{},
+							then:{
+								throws:"Some error it should throw"
+							}
+						}
+
+						//Now we are going to throw a fake error which is different from the error we should expect, and this should be an error
+						try{
+							throw("some error"); //Throw any error, it doesn't matter
+						} catch(any e) {
+
+							try{
+								//Now we try the doError function. It should throw an error of "some error", which is different than the specification expected
+								doErrorResultShouldBeTrue = variables.mockProxy.doError(e,local.specContext);
+							}
+							catch(any err)
+							{								
+								assert(err.message CONTAINS "some error");
+							}														
+						}
+					}
+				},
+				"Should run the onError in the specification if one was requested and there was an error when running the test":{
+					mxunit:function(){
+						//Create a specContext with an onError clause which will be run onError of the test
+						local.specContext = {
+							given:{},
+							onError:function(){
+								//set a variable into the request scope so that we can check it later
+								request.onErrorWasCalled = true;
+							},
+							//Tell this specificaiton to throw an error so that it will pass when we actually throw the error.
+							then:{
+								throws:"some error"
+							}
+						}
+
+						//Now we are going to throw a fake error so that we can test the call of the onError function in the passed in specification
+						try{
+							throw("some error"); //Throw any error, it doesn't matter
+						} catch(any e) {
+							//Pass the value of this to doError
+							variables.mockProxy.doError(e,local.specContext);
+							assert(request.onErrorWasCalled);
+						}
 					}
 				}
 			}
