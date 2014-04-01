@@ -323,7 +323,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 			writeLog(file="mock",text="There was an error in the collaborator #local.name#, parent was #variables.parentName#");
 
 			if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws") AND e.message CONTAINS local.specContext.then.throws)
-			{
+			{				
 				return true;
 			}
 			else if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws"))

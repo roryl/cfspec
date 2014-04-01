@@ -56,6 +56,45 @@
 					}
 				}
 			},
+			addMockContext:{
+				"Given a function context to mock it adds to the mocked contexts":{
+					mxunit:function(){
+						local.contextInfo = {
+							specPath:"/var/www/cfspec/core/tests/collaboratorA.spec",
+						    functionName:"getSimpleAndComplexValue",
+						    scenarioNAme:"Should mock out both methods from the collaborator"
+						}
+
+						variables.mockProxy.addMockContext(local.contextInfo);
+
+						local.mockContexts = variables.mockProxy.getMockContexts();
+						assert(NOT structIsEmpty(local.mockContexts));
+					}
+				},
+				"Given a duplicate context it throws an error":{
+					mxunit:function(){
+						local.contextInfo = {
+							specPath:"/var/www/cfspec/core/tests/collaboratorA.spec",
+						    functionName:"getComplexValue",
+						    scenarioNAme:"Should return the complex value from B"
+						}					
+
+						//Now create the second which should throw an error
+						try{
+							variables.mockProxy.addMockContext(local.contextInfo);
+						}
+						catch (any e){
+							//Save the error into the local scope so that we can ensure the assertion runs whether an error is thrown or not
+							assert(e.message CONTAINS "Mocking out the same function twice is not currently supported");							
+						}
+
+						local.mockContexts = variables.mockProxy.getMockContexts();		
+																					
+						assert(NOT structIsEmpty(local.mockContexts));
+						assert(local.mockContexts.len() IS 1);
+					}
+				}
+			},
 			doGiven:{
 				setup:function(){
 					makePublic(variables.mockProxy,"doGiven");
@@ -481,6 +520,27 @@
 				setup:function(){
 					makePublic(variables.mockProxy,"doError");
 				},
+				"Should throw an error if the specification expected an error but no error was actually caught":{
+					mxunit:function(){
+						//Create a specContext with an error to check for being thrown
+						local.specContext = {
+							given:{},
+							then:{
+								throws:"Some error it should throw"
+							}
+						}
+						local.error = {};
+						local.error.message = "The specification expected an error but did not receive one"
+						
+						try{
+							variables.mockProxy.doError(local.error,local.specContext)
+						}
+						catch (any e)
+						{							
+							assert(e.message CONTAINS "The specification expected an error but did not receive one");
+						}
+					}
+				},
 				"Should return true if the specification expected a specific error and that error was thrown":{
 					mxunit:function(){
 
@@ -557,6 +617,20 @@
 							variables.mockProxy.doError(e,local.specContext);
 							assert(request.onErrorWasCalled);
 						}
+					}
+				}
+			},
+			tryFunctionCall:{
+				"Should call the mocked function provided to the spec":{
+					setup:function(){
+						makePublic(variables.mockProxy,"tryFunctionCall");
+					},
+					mxunit:function(){
+
+						//Get the value from the mocked function that was setup in the tests setup in this spec
+						local.result = variables.mockProxy.getComplexValue();
+						
+						assert(isStruct(local.result));
 					}
 				}
 			}

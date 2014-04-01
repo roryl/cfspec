@@ -28,15 +28,23 @@ component output="false" displayname=""  accessors="true" extends="" {
 		variables.objectName = getMetaData(variables.object).fullName;
 		variables.contextInfo = arguments.contextInfo;	
 		variables.mockContexts = {};
+		addMockContext(arguments.contextInfo);
 		return this;
 	}
 
-	public function addMockContext(required functionName, required scope, required contextInfo)
+	public function addMockContext(required contextInfo)
 	{
-		variables.mockContexts[arguments.functionName] = {
-			scope:arguments.type,
-			contextInfo:arguments.contextInfo
-		};
+		if(structKeyExists(variables.mockContexts,arguments.contextInfo.functionName))
+		{
+			throw("Mocking out the same function twice is not currently supported. Ensure that there is only one mock for this function. The function you tried to mock was #arguments.contextInfo.functionName#");
+		}
+		else
+		{
+			variables.mockContexts[arguments.contextInfo.functionName] = {			
+				contextInfo:arguments.contextInfo
+			};	
+		}
+		
 	}
 
 	private function getContextByName(string functionName)
@@ -303,7 +311,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 		}
 	}
 
-	private function doError(required error, required specContext)
+	private function doError(required error, required specContext, expectedError=false)
 	{
 		local.name = getMetaData(variables.object).fullName;
 		writeLog(file="mock",text="There was an error in the collaborator #local.name#, parent was #variables.parentName#");
@@ -311,6 +319,11 @@ component output="false" displayname=""  accessors="true" extends="" {
 		if(structKeyExists(arguments.specContext,"onError") AND isClosure(arguments.specContext.onError))
 		{
 			arguments.specContext.onError();				
+		}
+		
+		if(arguments.expectedError)
+		{
+			throw(error.message);
 		}
 
 		if(structKeyExists(arguments.specContext,"then") AND structKeyExists(arguments.specContext.then,"throws") AND arguments.error.message CONTAINS arguments.specContext.then.throws)
@@ -356,7 +369,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 
 			//Look for any after function in the spec and call it if it exists
 			local.spec = "";
-			include template="#variables.contextInfo.specPath#";
+			include template="#variables.mockContexts[missingMethodName].contextInfo.specPath#";
 			local.specTest = local.spec.tests[variables.contextInfo.functionName];
 			local.specContext = local.spec.tests[variables.contextInfo.functionName][variables.contextInfo.scenarioName];
 			
@@ -381,8 +394,9 @@ component output="false" displayname=""  accessors="true" extends="" {
 
 			//If we got to this point, then the call worked, so check if the specification expected and error and if so, throw that error. 
 			if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws"))
-			{
-				throw("The specification expected an error but did not receive one. The specification exptected the error to contain: ""#local.specContext.then.throws#""");
+			{				
+				local.error.message = "The specification expected an error but did not receive one. The specification exptected the error to contain: ""#local.specContext.then.throws#""";
+				doError(local.error, local.specContext, true);
 			}			
 
 
@@ -393,11 +407,20 @@ component output="false" displayname=""  accessors="true" extends="" {
 
 				//Save the value to the cache so that if this method is called again, the value can be retreived from the cache
 				variables.cache.cachePut(local.value,"#variables.objectName#_#arguments.missingMethodName#");	
-			}						
+			}	
 
-			doAsserts(local.specContext,
-					  local.value,
-					  variables.object);
+
+			local.doAssertsArgs = {
+				specContext:local.specContext,
+				objectUnderTest:variables.object,								
+			}
+
+			if(NOT isNull(local.value))
+			{
+				local.doAssertsArgs.result = local.value;
+			}					
+
+			doAsserts(argumentCollection=doAssertsArgs);
 
 			/*doAfter arguments 
 			Set the arguments into a collection. Then we need to check if the value was null, and if it was not, then we can
@@ -417,7 +440,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 			doAfter(argumentCollection=local.doAfterArgs);			
 			
 		}
-		catch(any e) {
+		catch(any e) {			
 			doError(e,local.specContext);
 		}
 

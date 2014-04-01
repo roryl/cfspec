@@ -64,7 +64,7 @@ component output="false" displayname=""  {
 		
 		/* Wrap the object in a proxy method so that we can introspect the arguments and return values
 		of a function call */
-		local.result = createObject("mock.mockProxy").create(object=local.object,parentName=arguments.parentName,mockDepth=local.mockDepth,contextInfo=local.contextInfo);
+		local.result = createObject("mock.mockProxyNew").create(object=local.object,parentName=arguments.parentName,mockDepth=local.mockDepth,contextInfo=local.contextInfo);
 		//writeDump(local.result);
 		return local.result;
 	}
