@@ -27,7 +27,8 @@ if(structKeyExists(url,"compile"))
 {
 	if(structKeyExists(url,"com"))
 	{
-		specFile = replace(url.com,"Tests",".spec");
+		specFile = replace(url.com,".","/","all");
+		specFile = replace(specFile,"Tests",".spec");
 		specFile = replace(specFile,"/cfspec/tests/","/");
 		spec = new cfspec.core.spec.specParser().parseSpec("#specFile#","/cfspec/tests");
 	}
