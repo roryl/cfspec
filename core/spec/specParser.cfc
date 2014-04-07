@@ -178,14 +178,14 @@ component {
 					//Test the entityNew function
 					o('public function entityNew_Should_create_new_entity(){')
 						tab("+1");
-						o('var #entityName# = entityNew("#entityName#");')
+						o('var #entityName#1 = entityNew("#entityName#");')
 						for(var prop in simpleProps)
 						{
-							o('#entityName#.set#prop.name#("#prop.specTestValue#");')	
+							o('#entityName#1.set#prop.name#("#prop.specTestValue#");')	
 						}
-						o('entitySave(#entityName#);')
+						o('entitySave(#entityName#1);')
 						o('ORMFlush();')
-						o('entityDelete(#entityName#);')
+						o('entityDelete(#entityName#1);')
 						o('ORMFlush();')
 						tab("-1");
 					o('}')
@@ -210,34 +210,34 @@ component {
 
 						if(local.relation.fieldtype IS "one-to-many")
 						{
-							o('public function oneToMany_should_add_the_relation_#entityName#_to_#local.otherName#(){');
+							o('public function oneToMany_should_add_the_relation_#entityName#_to_#local.otherName#2(){');
 								tab('+1');
 								o('//Create the first entity')
-								o('var #entityName# = entityNew("#entityName#");')
+								o('var #entityName#1 = entityNew("#entityName#");')
 								for(var prop in simpleProps)
 								{
-									o('#entityName#.set#prop.name#("#prop.specTestValue#");')
+									o('#entityName#1.set#prop.name#("#prop.specTestValue#");')
 								}
-								o('entitySave(#entityName#);')
+								o('entitySave(#entityName#1);')
 
 								o('//Create the second entity')
-								o('var #local.otherName# = entityNew("#local.relation.cfc#");')
+								o('var #local.otherName#2 = entityNew("#local.relation.cfc#");')
 								for(var prop in otherSimpleProps)
-								{
-									o('#local.otherName#.set#prop.name#("#prop.specTestValue#");')
+								{									
+									o('#local.otherName#2.set#prop.name#("#prop.specTestValue#");')
 								}
-								o('entitySave(#local.otherName#);')
+								o('entitySave(#local.otherName#2);')
 
 								o('//Set the first entity into the second')
-								o('#local.otherName#.setUser(users)')
+								o('#local.otherName#2.set#local.otherName#(#entityName#1)')
 
 								o('//Add the second entiry to the first')
-								o('#entityName#.add#local.otherName#(#local.otherName#)')
+								o('#entityName#1.add#local.otherName#(#local.otherName#2)')
 								o('ORMFlush()')
 
 								o('//Delete the entities that were created')
-								o('entityDelete(#entityName#)');
-								o('entityDelete(#local.otherName#)')
+								o('entityDelete(#entityName#1)');
+								o('entityDelete(#local.otherName#2)')
 								o('ORMFlush()');
 
 								tab("-1")
@@ -545,7 +545,7 @@ component {
 			}
 		}
 		catch(any e){
-			//writeDump(entityName);
+			writeDump(otherSimpleProps);
 			writeDump(arguments);
 			writeDump(spec);
 			writeDump(e);
