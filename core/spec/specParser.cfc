@@ -7,10 +7,13 @@
 */
 
 import writeFileAndDirectories;
-component {
+component accessors="true" {
 
 	property name="compilePath";
 	property name="specFilePath";
+	property name="timeForDirectory";
+	property name="specFileList";
+
 	public function init(){
 		variables.lastTab = 0;
 		variables.debugging = true;
@@ -41,12 +44,13 @@ component {
 		return _parseSpec(spec,finalCompilePath);
 	}
 
-	public function parseAllSpecs(required specDirectory, required outputPath)
+	public function parseAllSpecs(required specDirectory, required outputPath, ignore=[])
 	{
 		writeLog(file="cfspec",text="Start parseAllSpecs");
 		if(structKeyExists(url,"reloadFiles") OR NOT structKeyExists(application,"specFiles"))
 		{
-			application.specFiles = getSpecFiles(arguments.specDirectory,"*.spec");	
+			application.specFiles = getSpecFiles(arguments.specDirectory,arguments.ignore,"%.spec%");
+			variables.specFileList = application.specFiles;
 		}
 
 		for(var file in application.specFiles)
@@ -62,14 +66,16 @@ component {
 			
 		}
 		writeLog(file="cfspec",text="End parseAllSpecs");
-		return application.specFiles;
+		return this;
 	}
 
-	private function getSpecFiles(required mapping,required filter){
+	private function getSpecFiles(required mapping,ignore=[],required filter){
 		writeLog(file="cfspec",text="Start getSpecFiles");
 		var output = [];
 
-		files = directoryList(expandPath(arguments.mapping),true,"query",arguments.filter);	
+		//var files = directoryList(expandPath(arguments.mapping),false,"query");
+		variables.timeForDirectory = queryNew("path,time");
+		var files = getDirectoryFiles(expandPath(arguments.mapping),arguments.ignore,arguments.filter);
 		
 		for(i=1;i LTE files.recordCount; i=i+1)
 		{
@@ -83,6 +89,56 @@ component {
 		}
 		writeLog(file="cfspec",text="End getSpecFiles");
 		return output;
+	}
+
+	private function getDirectoryFiles(path,ignore=[],filter="%.spec%")
+	{
+		local.start = getTickCount();
+		local.directories = directoryList(arguments.path,false,"query");
+		
+		//Append the fileName to the directory
+		local.directories.addColumn("fullpath");
+		for(local.i = 1; local.i LTE local.directories.recordCount; local.i++) {
+			local.directories.fullPath[i] = "#local.directories.directory[i]#/#local.directories.name[i]#";
+		}
+
+		
+		
+		//Get the files/directories that are not ignored
+		query name="local.clean" dbtype = "query" {
+			echo("SELECT * from local.directories WHERE 1=1");
+			for(match in arguments.ignore)
+			{
+				echo("AND fullpath NOT LIKE '#match#'");
+			}
+		}
+
+		//Get the files
+		query name="local.files" dbtype = "query" {
+			echo("SELECT * from local.clean WHERE type = 'File' AND name LIKE '#arguments.filter#'");
+		}
+
+		//Get the directories
+		query name="local.dirs" dbtype = "query" {
+			echo("SELECT * from local.clean WHERE type = 'Dir'");
+		}
+
+		loop query="#local.dirs#"{
+			//writeDump("#directory#/#name#");
+
+			local.newfiles = getDirectoryFiles("#directory#/#name#",arguments.ignore,arguments.filter);
+
+			query name="local.files" dbtype="query"{
+				echo("SELECT * FROM local.files
+					  UNION ALL 
+					  SELECT *
+					  FROM local.newFiles");
+			}
+		}
+		local.end = getTickCount();
+		variables.timeForDirectory.addRow([arguments.path, (local.end - local.start) / 1000]);
+
+		return local.files;
 	}
 
 	private function _parseSpec(specObject,compilePath){

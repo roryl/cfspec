@@ -38,7 +38,7 @@ spec = {
 				with:{
 					"this.getMyOwnValue":{mimic:"Should return my own value"},
 					"collaboratorB.getComplexValue":{mimic:"Should return the complex value from C"},
-					"collaboratorB.getSimpleValue":{mimic:"Should return the simple value"}
+					// "collaboratorB.getSimpleValue":{mimic:"Should return the simple value"}
 				}
 			},
 			// "Should test collaborator assert fixture":{

@@ -43,7 +43,7 @@
 						spec:"/this/is/an/invalid/path"
 					},
 					then:{
-						returns:"isError"
+						throws:"file not found"
 					}
 				}
 			},

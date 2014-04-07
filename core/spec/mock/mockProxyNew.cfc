@@ -1,4 +1,4 @@
-/**
+	/**
 *
 * 
 * @author  Rory Laitila
@@ -319,8 +319,8 @@ component output="false" displayname=""  accessors="true" extends="" {
 		if(structKeyExists(arguments.specContext,"onError") AND isClosure(arguments.specContext.onError))
 		{
 			arguments.specContext.onError();				
-		}
-		
+		}		
+
 		if(arguments.expectedError)
 		{
 			throw(error.message);
@@ -328,6 +328,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 
 		if(structKeyExists(arguments.specContext,"then") AND structKeyExists(arguments.specContext.then,"throws") AND arguments.error.message CONTAINS arguments.specContext.then.throws)
 		{
+
 			return true;
 		}
 		else if(structKeyExists(arguments.specContext,"then") AND structKeyExists(arguments.specContext.then,"throws"))
@@ -365,11 +366,25 @@ component output="false" displayname=""  accessors="true" extends="" {
 	{
 
 		writeLog(file="mock",text="CALL #variables.objectName#.#arguments.missingMethodName#");
-		try {			
 
-			//Look for any after function in the spec and call it if it exists
-			local.spec = "";
+		//Look for any after function in the spec and call it if it exists
+		local.spec = "";
+		if(NOT structKeyExists(variables.mockContexts,"#arguments.missingMethodName#"))
+		{
+			//This method is not mocked, so just call it and return the result
+			try{
+				return evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=missingMethodArguments)");
+			}
+			catch(any e)
+			{
+				rethrow;
+			}
+		}
+
+		try {
+
 			include template="#variables.mockContexts[missingMethodName].contextInfo.specPath#";
+
 			local.specTest = local.spec.tests[variables.contextInfo.functionName];
 			local.specContext = local.spec.tests[variables.contextInfo.functionName][variables.contextInfo.scenarioName];
 			
@@ -440,7 +455,7 @@ component output="false" displayname=""  accessors="true" extends="" {
 			doAfter(argumentCollection=local.doAfterArgs);			
 			
 		}
-		catch(any e) {			
+		catch(any e) {
 			doError(e,local.specContext);
 		}
 
