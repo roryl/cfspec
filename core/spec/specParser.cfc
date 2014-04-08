@@ -501,8 +501,8 @@ component accessors="true" {
 										var compareType = replace(facts[fact],"is","");
 										var type = serialize(createObject("component","getType"));
 										o('var getType = evaluate("#type#")')
-										o('var type = getType.init(testResult)')
-										o('assert(type IS "#compareType#","The result from the function call #name# was of type ##type## but the specification expected to return a #compareType#")')	
+										o('var type = getType.#facts[fact]#(testResult)');
+										o('assert(type,"The result from the function call #name# was not the right type, the specification expected to return a #compareType#")')	
 									}
 									else if(facts[fact] CONTAINS "isError") //If we are expecting an error, then the mockProxy will return true if the error happened
 									{

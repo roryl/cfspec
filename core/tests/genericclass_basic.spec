@@ -64,6 +64,15 @@
 					then:{
 						returns:"isObject"
 					}
+				},
+				"Should return and assert a image type":{
+					given:function(){
+						image = imageNew(width="100",height="100");
+						return {theArgument:image}
+					},
+					then:{
+						returns:"isImage"
+					}
 				}
 			},
 		}

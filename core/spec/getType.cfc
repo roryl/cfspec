@@ -70,4 +70,79 @@ component {
 		}
 		return false;
 	}
+
+	public function onMissingMethod(missingMethodName, missingMethodArguments)
+	{
+		return evaluate("get#arguments.missingMethodName#(data=arguments.missingMethodArguments[1])");
+	}
+
+	public function getIsImage(required data)
+	{
+		return isImage(arguments.data);
+	}
+
+	public function getIsCustomFunction(required data)
+	{
+		return isCustomFunction(arguments.data);
+	}
+
+	public function getIsClosure(required data)
+	{
+		return isClosure(arguments.data);
+	}
+
+	public function getIsBinary(required data)
+	{
+		return isBinary(arguments.data);
+	}
+
+	public function getIsJson(required data)
+	{
+		return isJson(arguments.data);
+	}
+
+	public function getIsDate(required data)
+	{
+		return isDate(arguments.data);
+	}
+
+	public function getIsString(required data)
+	{
+		return isSimpleValue(arguments.data);
+	}
+
+	public function getIsNumeric(required data)
+	{
+		return isNumeric(arguments.data);
+	}
+
+	public function getIsArray(required data)
+	{
+		return isArray(arguments.data);
+	}
+
+	public function getIsStruct(required data)
+	{
+		return isStruct(arguments.data);
+	}
+
+	public function getIsObject(required data)
+	{			
+		return isObject(arguments.data);
+	}
+
+	public function getIsBoolean(required data)
+	{			
+		return isBoolean(arguments.data);
+	}
+
+	public function getIsQuery(required data)
+	{			
+		return isQuery(arguments.data);
+	}
+
+	public function getIsXML(required data)
+	{
+		return isXML(arguments.data);
+	}
 }
