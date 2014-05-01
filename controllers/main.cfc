@@ -29,7 +29,7 @@ component output="true" hint="Example FW/1 controller."{
 			}
 
 			//Do the compile
-			rc.FinishedSpecs = new cfspec.core.spec.specParser().parseAllSpecs(rc.specPath,rc.compilePath);			
+			rc.FinishedSpecs = new cfspec.core.spec.specParser().parseAllSpecs(rc.specPath,rc.compilePath,["%.git%","%WEB-INF%","%.svn%","%deploy%","%docs%","%.vagrant%","%assets%","%mxunit%","%buglog%","%libraries%","%dynatree-1.2.0%","%highcharts%","%reportalytics%"]);			
 		}
 	}
 

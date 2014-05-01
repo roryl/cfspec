@@ -78,14 +78,15 @@ component output="false" displayname=""  {
 			{
 				throw;
 			}
+			return local.specContext;
 		}
 		catch (any e) {
 			writeDump("Error on mockBuilderNew.getSpecContext");
 			writeDump(local.spec);
 			writeDump(arguments.contextInfo);
-			//abort;
+			abort;
 		}
-		return local.specContext;
+		
 	}
 
 	public function makeFunctionPublic(required component object, required functionName){

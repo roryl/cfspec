@@ -52,6 +52,10 @@ component accessors="true" {
 			application.specFiles = getSpecFiles(arguments.specDirectory,arguments.ignore,"%.spec%");
 			variables.specFileList = application.specFiles;
 		}
+		else
+		{
+			variables.specFileList = application.specFiles;
+		}
 
 		for(var file in application.specFiles)
 		{
@@ -188,126 +192,182 @@ component accessors="true" {
 
 		*/
 		var spec = arguments.specObject;
-		try {
-			savecontent variable="local.output"{
 
+		if(structKeyExists(spec,"URL"))
+		{
+			local.output = buildHTTPSpec(spec);
+		}
+		else{
+			try {
+				local.output = buildClassSpec(local.spec);
+			}
+			catch(any e){
+				
+				writeDump(arguments);
+				writeDump(spec);
+				writeDump(e);
+				abort;
+			}
+		}
+
+		
+
+		//Get the file path by first removing the last element
+		writeLog(file="cfspec",text="End _parseSpec");
+		fileWrite(arguments.compilePath,local.output);
+		return spec;
+	}
+
+	private function buildBeforeTests(required struct spec)
+	{
+		local.spec = arguments.spec
+		o('public function beforeTests(){')
+			tab(2);
+			o('var spec = "";');
+			o('/*We need to import the spec in order to call the setup function because any functions within the spec')
+			o('dont seem to return unless they are loaded within the scope of the caller*/')
+			o('include template="#variables.specFilePath#";')
+			o('variables.spec = spec')
+
+			//If There is a setup function defined in the spec
+			if(structKeyExists(spec,"setup"))
+			{
+				o('//Call the setup function that is defined in the spec')
+				o('spec.setup();')
+			}
+			tab(0);tab(1);
+			o('}')
+			nl()
+	}
+
+	private string function buildHTTPSpec(required struct spec)
+	{
+		local.spec = arguments.spec;
+		savecontent variable="local.output"{
+			tab(0);
 			o('component extends="cfspec.core.spec.testCase" {');
 			nl()
 				//Component Body
 				tab(1)
-				o('public function beforeTests(){')
-					tab(2);
-					o('var spec = "";');
-					o('/*We need to import the spec in order to call the setup function because any functions within the spec')
-					o('dont seem to return unless they are loaded within the scope of the caller*/')
-					o('include template="#variables.specFilePath#";')
-					o('variables.spec = spec')
+				buildBeforeTests(local.spec);
 
-					//If There is a setup function defined in the spec
-					if(structKeyExists(spec,"setup"))
-					{
-						o('//Call the setup function that is defined in the spec')
-						o('spec.setup();')
-					}
-					tab(0);tab(1);
-					o('}')
-					nl()
-
-
-
-				var metaData = getComponentMetaData(spec.class);
-
-				
-				//If the spec describes a persistent entity, then we can automatically build out tests to test the 
-				//entity methods
-				if(structKeyExists(metaData,"persistent") and metaData.persistent IS true)
+				for(local.uri IN spec.tests)
 				{
-					var entityTester = new entityTester(listLast(spec.class,"."));
-					var entityName = entityTester.getEntityName();
-					var simpleProps = entityTester.getSimpleProperties();
-					
-					/* First we want to test the basic methods: entityNew, entitySave, entityDelete
-					we will accomplish this by getting all of the simple properties (non relationships and non identities)
-					and using those properties to populate the calls
-					*/
-					
-					//Test the entityNew function
-					o('public function entityNew_Should_create_new_entity(){')
-						tab("+1");
-						o('var #entityName#1 = entityNew("#entityName#");')
-						for(var prop in simpleProps)
-						{
-							o('#entityName#1.set#prop.name#("#prop.specTestValue#");')	
-						}
-						o('entitySave(#entityName#1);')
-						o('ORMFlush();')
-						o('entityDelete(#entityName#1);')
-						o('ORMFlush();')
-						tab("-1");
-					o('}')
-
-					/*Test Relationships
-					Now we want to complete more advanced tests of the relationships
-					*/
-					local.relationships = entityTester.getRelationships();
-					
-					for(local.relation in local.relationships)
-					{
-
-						local.otherTester = new entityTester(local.relation.cfc);
-
-						if(structKeyExists(local.relation,"singularname")){
-							local.otherName = local.relation.singularname;
-						} else {
-							local.otherName = local.relation.cfc;
-						}
-						
-						local.otherSimpleProps = local.otherTester.getSimpleProperties();
-
-						if(local.relation.fieldtype IS "one-to-many")
-						{
-							o('public function oneToMany_should_add_the_relation_#entityName#_to_#local.otherName#2(){');
-								tab('+1');
-								o('//Create the first entity')
-								o('var #entityName#1 = entityNew("#entityName#");')
-								for(var prop in simpleProps)
-								{
-									o('#entityName#1.set#prop.name#("#prop.specTestValue#");')
-								}
-								o('entitySave(#entityName#1);')
-
-								o('//Create the second entity')
-								o('var #local.otherName#2 = entityNew("#local.relation.cfc#");')
-								for(var prop in otherSimpleProps)
-								{									
-									o('#local.otherName#2.set#prop.name#("#prop.specTestValue#");')
-								}
-								o('entitySave(#local.otherName#2);')
-
-								o('//Set the first entity into the second')
-								o('#local.otherName#2.set#local.otherName#(#entityName#1)')
-
-								o('//Add the second entiry to the first')
-								o('#entityName#1.add#local.otherName#(#local.otherName#2)')
-								o('ORMFlush()')
-
-								o('//Delete the entities that were created')
-								o('entityDelete(#entityName#1)');
-								o('entityDelete(#local.otherName#2)')
-								o('ORMFlush()');
-
-								tab("-1")
-							o('}')
-						}
+					//These keywords are not actually URIs and so they can be skipped
+					if(local.uri IS "setup" OR local.uri IS "before" OR local.uri IS "after" OR local.uri IS "factory"){
+						continue;	
 					}
 
-					//writeDump(local.relationships);abort;
-					
+					for(local.method IN spec.tests[local.uri])
+					{
+						//These keywords are not actually methods and so they can be skipped
+						if(local.method IS "setup" OR local.method IS "before" OR local.method IS "after" OR local.method IS "factory"){
+							continue;	
+						}
+
+						for(local.context IN spec.tests[local.uri][local.method])
+						{
+							//These keywords are not actually scenarios and so they can be skipped
+							if(local.context IS "setup" OR local.context IS "before" OR local.context IS "after" OR local.context IS "factory"){
+								continue;	
+							}
+
+							//Setup at the all tests level
+							if(structKeyExists(spec.tests,"setup"))
+							{
+								o('//Get the setup function for the test')
+								o('var allTestsSetup = variables.spec.tests.setup')
+								o('//Call the setup function for the test')
+								o('allTestsSetup()')							
+							}
+
+							//Setup at the specific function test level
+							if(structKeyExists(spec.tests[local.uri],"setup"))
+							{
+								o('//Get the setup function for the test')
+								o('var uriTestSetup = variables.spec.tests.#name#.setup')
+								o('//Call the setup function for the test')
+								o('uriTestSetup()')							
+							}
+
+							//Setup at the context level
+							if(structKeyExists(spec.tests[local.uri][local.method],"setup"))
+							{
+								o('//Get the setup function for the test')
+								o('var methodTestSetup = variables.spec.tests.#name#["#context#"].setup')
+								o('//Call the setup function for the test');
+								
+								o('methodTestSetup()')
+							}
+
+							//Setup at the context level
+							if(structKeyExists(spec.tests[local.uri][local.method][local.context],"setup"))
+							{
+								o('//Get the setup function for the test')
+								o('var contextTestSetup = variables.spec.tests.#name#["#context#"].setup')
+								o('//Call the setup function for the test');
+								
+								o('contextTestSetup()')
+							}
+
+							local.clean = cleanURI(local.uri);
+
+							o('public function #local.method#_#local.clean#(){');
+								tab("+1");
+								o('test = new cfspec.core.spec.httpTester(spec=variables.spec, method="#local.method#", resource="#local.uri#", scenario="#local.context#")');
+								o('test.doHTTPCall();')
+								tab("-1");
+							o('}')
+							nl();
+						}
+					}
 				}
+
+
+				tab(-1);
+			nl();
+			echo('}');//Ending component Tag
+		}
+
+		return local.output;
+	}
+
+	private function cleanURI(required string URI)
+	{
+		local.output = arguments.uri;
+		local.output = replaceNoCase(local.output,"?","","all");
+		local.output = replaceNoCase(local.output,"/","_","all");
+		local.output = replaceNoCase(local.output,"=","_","all");
+		local.output = replaceNoCase(local.output,".","_","all");	
+		return local.output;
+	}
+
+
+	private string function buildClassSpec(required struct spec)
+	{
+		local.spec = arguments.spec;
+		savecontent variable="local.output"{
+
+			o('component extends="cfspec.core.spec.testCase" {');
+			nl()
+				//Component Body
+				tab(1);
+				buildBeforeTests(local.spec);
+
+				if(structKeyExists(spec,"class"))
+				{
+					var metaData = getComponentMetaData(spec.class);					
+					//If the spec describes a persistent entity, then we can automatically build out tests to test the 
+					//entity methods
+					if(structKeyExists(metaData,"persistent") and metaData.persistent IS true)
+					{
+						buildEntityTests(local.spec);					
+					}
+				}				
 					
 				for(var name in spec.tests)//For each of the tested functions defined in the specification
 				{
-
+					//These keywords are not actually tests and so they can be skipped
 					if(name IS "setup" OR name IS "before" OR name IS "after" OR name IS "factory"){
 						continue;	
 					}
@@ -322,10 +382,10 @@ component accessors="true" {
 					}	
 					else{
 						var func = spec.tests[name];
-					}			
+					}
 
 					for(var context in func)//For each of the contexts for this function that we are testing
-					{
+					{						
 						//Skip any before contexts as they should not be called
 						if(context IS "before" OR
 						   context IS "after"){
@@ -433,40 +493,7 @@ component accessors="true" {
 
 						o('//Pass the component under test to the mockBuilder. The mock builder will mock out state and dependencies as described by the spec')
 						o('test = new cfspec.core.spec.mockBuilderNew(test,"#variables.specFilePath#","#name#","#context#")')
-
-						/*if(structKeyExists(func[context],"before") AND isClosure(func[context].before))
-						{
-							o('//Call the before function that was specified')
-							o('variables.spec.tests["#name#"]["#context#"].before(test)')
-						}*/
-
-						/*if(structKeyExists(func[context],"given"))
-						{
-
-							var args = func[context].given;//The arguments given to the test
-
-							if(isClosure(args))
-							{
-								//Set the arguments into the request scope as they can be referenced in asserts and cleanups
-								o('request.given = variables.spec.tests["#name#"]["#context#"].given(test);');
-							}
-							else
-							{
-
-								//Set the arguments into the request scope as they can be referenced in asserts and cleanups
-								o('request.given = variables.spec.tests["#name#"]["#context#"].given;');
-								//Serialize any arguments which are intended
-							}
-							
-							//Call the method under test passing in the variables
-							o('var testResult = test.#name#(argumentCollection=request.given);');
-						}
-						else
-						{
-							//Call the method under test
-							o('var testResult = test.#name#();');
-						}*/	
-						//Call the method under test
+						
 						o('var testResult = test.#name#();');
 						
 						o('//Assert facts based on the specification''s "then" attribute')
@@ -599,24 +626,120 @@ component accessors="true" {
 			echo('}');//Ending component Tag
 
 			}
-		}
-		catch(any e){
-			writeDump(otherSimpleProps);
-			writeDump(arguments);
-			writeDump(spec);
-			writeDump(e);
-			abort;
-		}
-
-		//Get the file path by first removing the last element
-		writeLog(file="cfspec",text="End _parseSpec");
-		fileWrite(arguments.compilePath,local.output);
-		return spec;
+		return local.output;
 	}
 
-	private function buildContext(required context)
+	private function buildEntityTests(required struct spec)
 	{
+		var entityTester = new entityTester(listLast(spec.class,"."));
+		var entityName = entityTester.getEntityName();
+		var simpleProps = entityTester.getSimpleProperties();
+		
+		/* First we want to test the basic methods: entityNew, entitySave, entityDelete
+		we will accomplish this by getting all of the simple properties (non relationships and non identities)
+		and using those properties to populate the calls
+		*/
+		
+		//Test the entityNew function
+		o('public function entityNew_Should_create_new_entity(){')
+			tab("+1");
+			o('var #entityName#1 = entityNew("#entityName#");')
+			for(var prop in simpleProps)
+			{
+				if(isSimpleValue(prop.specTestValue))
+						{
+							o('#entityName#1.set#prop.name#("#prop.specTestValue#");')							
+						}
+						else
+						{
+							o('#entityName#1.set#prop.name#(#serialize(prop.specTestValue)#);')	
+						}
+				
+			}
+			o('entitySave(#entityName#1);')
+			o('ORMFlush();')
+			o('entityDelete(#entityName#1);')
+			o('ORMFlush();')
+			tab("-1");
+		o('}')
 
+		/*Test Relationships
+		Now we want to complete more advanced tests of the relationships
+		*/
+		local.relationships = entityTester.getRelationships();
+		
+		for(local.relation in local.relationships)
+		{
+
+			local.otherTester = new entityTester(local.relation.cfc);
+
+			if(structKeyExists(local.relation,"singularname")){
+				local.otherName = local.relation.singularname;
+			} else {
+				local.otherName = local.relation.name;
+			}						
+
+			local.otherSimpleProps = local.otherTester.getSimpleProperties();
+
+			if(local.relation.fieldtype IS "one-to-many")
+			{
+
+				//Get the property that represents the other sie of this relation
+				local.otherRelation = local.otherTester.getRelationshipReverseProperty(entityName, "many-to-one");
+
+				o('public function oneToMany_should_add_the_relation_#entityName#_to_#local.otherName#2(){');
+					tab('+1');
+					o('//Create the first entity')
+					o('var #entityName#1 = entityNew("#entityName#");')
+					for(var prop in simpleProps)
+					{
+						if(isSimpleValue(prop.specTestValue))
+						{
+							o('#entityName#1.set#prop.name#("#prop.specTestValue#");')							
+						}
+						else
+						{
+							o('#entityName#1.set#prop.name#(#serialize(prop.specTestValue)#);')
+						}
+						
+					}
+					o('entitySave(#entityName#1);')
+
+					o('//Create the second entity')
+					o('var #local.otherName#2 = entityNew("#local.relation.cfc#");')
+					for(var prop in otherSimpleProps)
+					{									
+						if(isSimpleValue(prop.specTestValue))
+						{
+							o('#local.otherName#2.set#prop.name#("#prop.specTestValue#");')										
+						}
+						else
+						{
+							o('#local.otherName#2.set#prop.name#(#serialize(prop.specTestValue)#);')
+						}
+					}
+					
+
+					o('//Set the first entity into the second')
+					o('#local.otherName#2.set#local.otherRelation.name#(#entityName#1)')
+
+					o('//Add the second entiry to the first')
+					o('#entityName#1.add#local.otherName#(#local.otherName#2)')
+
+					o('entitySave(#local.otherName#2);')
+					o('ORMFlush()')
+
+					o('//Delete the entities that were created')
+					o('entityDelete(#entityName#1)');
+					o('entityDelete(#local.otherName#2)')
+					o('ORMFlush()');
+
+					tab("-1")
+				o('}')
+			}
+		}
+
+		//writeDump(local.relationships);abort;
 	}
 
 	/*private function verifySchema(spec)
