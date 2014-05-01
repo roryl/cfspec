@@ -51,4 +51,15 @@ component {
 	public function getEntityName(){
 		return listLast(variables.metaData.fullName,".");
 	}
+
+	public function getRelationshipReverseProperty(required entityName, required fieldType){
+		local.relationships = getRelationships();
+		for(local.relation IN local.relationships)
+		{
+			if(local.relation.cfc IS arguments.entityName AND local.relation.fieldType IS arguments.fieldType)
+			{
+				return local.relation;
+			}
+		}		
+	}
 }
