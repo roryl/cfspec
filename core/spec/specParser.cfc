@@ -601,7 +601,7 @@ component accessors="true" {
 			}
 		}
 		catch(any e){
-			writeDump(otherSimpleProps);
+			
 			writeDump(arguments);
 			writeDump(spec);
 			writeDump(e);

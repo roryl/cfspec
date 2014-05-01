@@ -403,9 +403,21 @@ component output="false" displayname=""  accessors="true" extends="" {
 			local.given = doGiven(local.specContext,
 								  variables.depth,
 								  arguments.missingMethodArguments);
-
-			//Pass the arguments into the method being called under test			
-			local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");	
+			//writeDump("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");
+			// writeDump(variables.object.onStartTag(variables,{test="test"}));
+			// abort;
+			if(structIsEmpty(local.given))
+			{
+				
+				//Pass the arguments into the method being called under test			
+				local.value = evaluate("variables.object.#arguments.missingMethodName#()");
+			}
+			else
+			{
+				//Pass the arguments into the method being called under test			
+				local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");
+			}
+				
 
 			//If we got to this point, then the call worked, so check if the specification expected and error and if so, throw that error. 
 			if(structKeyExists(local.specContext,"then") AND structKeyExists(local.specContext.then,"throws"))
