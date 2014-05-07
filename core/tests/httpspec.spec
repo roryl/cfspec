@@ -7,10 +7,10 @@
 					"Should return hello":{
 						given:{														
 							url:"",
-							//body:"",
-							// formfields:[
-							// 	{name="test", value="value1"}
-							// ],
+							body:"",
+							formfields:[
+								{name="test", value="value1"}
+							],
 							cookies:[
 								{name="test", value="value1"}
 							]
@@ -29,17 +29,17 @@
 						}					
 					}
 				},
-				// put:{
-				// 	"Should return hello":{
-				// 		given:{							
-				// 			headers:[],
-				// 			parameters:[]
-				// 		},
-				// 		then:{
-				// 			returns:"isJson"
-				// 		}					
-				// 	}
-				// }
+				put:{
+					"Should save hello":{
+						given:{							
+							headers:[],
+							parameters:[]
+						},
+						then:{
+							returns:"isJson"
+						}					
+					}
+				}
 				
 			}
 		}

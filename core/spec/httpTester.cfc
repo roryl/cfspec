@@ -61,7 +61,7 @@ component accessors="true"{
 
 		}
 		doAssertStandardHTTPResponses(local.cfhttp, local.context);
-		writeDump(local.cfhttp);
+		writeDump(serialize(local.cfhttp));
 		abort;
 		return local.cfhttp;
 
