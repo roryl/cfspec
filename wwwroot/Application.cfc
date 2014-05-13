@@ -1,8 +1,8 @@
-component extends="/framework" output="false"
+component extends="framework" output="false"
 {
 	this.name="cfspec";
 	
-	this.mappings["/cfspec"] = getDirectoryFromPath(getBaseTemplatePath());
+	this.mappings["/cfspec"] = expandPath("../");
 	this.mappings["/affiliates"] = "/var/www/affiliates";
 	this.mappings["/mxunit"] = getDirectoryFromPath(getBaseTemplatePath()) & "libraries/mxunit";
 
