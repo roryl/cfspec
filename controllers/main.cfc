@@ -30,6 +30,7 @@ component output="true" hint="Example FW/1 controller."{
 
 			//Do the compile
 			rc.FinishedSpecs = new cfspec.core.spec.specParser().parseAllSpecs(rc.specPath,rc.compilePath,["%.git%","%WEB-INF%","%.svn%","%deploy%","%docs%","%.vagrant%","%assets%","%mxunit%","%buglog%","%libraries%","%dynatree-1.2.0%","%highcharts%","%reportalytics%"]);			
+			rc.specFiles = rc.finishedSpecs.getSpecFileList();
 		}
 	}
 
@@ -41,6 +42,7 @@ component output="true" hint="Example FW/1 controller."{
 		if(structKeyExists(rc,"submit"))
 		{
 			rc.spec = new cfspec.core.spec.specParser().parseAllSpecs(rc.compilePath,rc.outputPath);
+			rc.specFiles = rc.spec.getSpecFileList();
 		}
 	}
 	

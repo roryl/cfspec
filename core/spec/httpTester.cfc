@@ -26,25 +26,35 @@ component accessors="true"{
 		local.URI = variables.spec.url & variables.resource;
 		
 		local.context = variables.spec.tests[variables.resource][variables.method][variables.scenario];
+
+		local.specLevels = [
+			variables.spec.tests,
+			variables.spec.tests[variables.resource],
+			variables.spec.tests[variables.resource][variables.method],
+			variables.spec.tests[variables.resource][variables.method][variables.scenario]
+		];
+
+		doBefore(local.specLevels);
+
 		http url="http://#local.uri#" method="#variables.method#" result="local.cfhttp" {
 
 			if(structKeyExists(local.context,"given"))
 			{
 				if(structKeyExists(local.context.given,"url"))
 				{
-					httpparam type="url" name="url" value="#local.context.given.url#";
+					httpparam type="url" name="url" value="#getOrCallValue(local.context.given.url)#";
 				}
 
 				if(structKeyExists(local.context.given,"body"))
 				{
-					httpparam type="body" value="#local.context.given.body#";
+					httpparam type="body" value="#getOrCallValue(local.context.given.body)#";
 				}
 
 				if(structKeyExists(local.context.given,"formfields"))
 				{
 					for(local.field IN local.context.given.formfields)
 					{
-						httpparam type="formfield" name="#local.field.name#" value="#local.field.value#";	
+						httpparam type="formfield" name="#local.field.name#" value="#getOrCallValue(local.field.value)#";	
 					}
 					
 				}
@@ -53,16 +63,20 @@ component accessors="true"{
 				{
 					for(local.cookie IN local.context.given.cookies)
 					{
-						httpparam type="cookie" name="#local.cookie.name#" value="#local.cookie.value#";	
+						httpparam type="cookie" name="#local.cookie.name#" value="#getOrCallValue(local.cookie.value)#";	
 					}
 					
 				}
 			}
-
 		}
+
+		//Do all of the standard HTTP response checks (for mime type, response code, etc)
 		doAssertStandardHTTPResponses(local.cfhttp, local.context);
-		writeDump(serialize(local.cfhttp));
-		abort;
+		
+		doAsserts(local.context, local.cfhttp);
+
+		doAfter(local.specLevels, local.cfhttp);
+
 		return local.cfhttp;
 
 	}
@@ -73,6 +87,92 @@ component accessors="true"{
 		if(arguments.actualValue IS NOT local.expected)
 		{
 			throw("The value of #arguments.type# was not correct. The specification expected #local.expected# but received #arguments.actualValue#");
+		}
+	}
+
+	public function doAsserts(required specContext, required response){
+		if(structKeyExists(arguments.specContext,"then"))
+		{
+			if(structKeyExists(arguments.specContext.then,"assert"))
+			{				
+				local.result = arguments.specContext.then.assert(arguments.response);
+				if(NOT isDefined('local.result'))
+				{
+					throw("Your test assertion must return either true for success or false for a failure");
+				}
+
+				if(local.result IS false)
+				{
+					throw(message="The assertion failed");
+				}
+			}
+		}
+	}
+
+	/**
+	* doBefore checks and runs the before clauses from the specification. 
+	*/
+	private function doBefore(required specLevels)
+	{
+		/*
+		BEFORE functions
+		
+		For each of the levels, check if the before function exists. If it does, we call it
+		*/
+		for(local.beforeCheck in arguments.specLevels)
+		{
+			//Call any after functions for this collaborator specification
+			if(structKeyExists(local.beforeCheck,"before"))
+			{
+				//If the before is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
+				if(isClosure(local.beforeCheck.before))
+				{
+					local.beforeCheck.before();	
+				}
+				else if(isStruct(local.beforeCheck.before))
+				{
+					if(structKeyExists(local.beforeCheck.before,"unit") AND variables.depth IS 1)
+					{
+						local.beforeCheck.before.unit();
+					}
+				}
+				
+			}
+		}
+	}
+
+	/**
+	* doAfter calls any acter clauses in any of the spec levels, in the following order: 
+	* All Tests > Test Level > Scenario Level
+	*/
+	private function doAfter(required specLevels, response){
+
+		for(local.afterCheck in arguments.specLevels)
+		{
+			if(structKeyExists(local.afterCheck,"after"))
+			{
+				//If the after is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
+				if(isClosure(local.afterCheck.after))
+				{
+					afterMeta = getMetaData(local.afterCheck.after);
+					args = {}
+					for(param in afterMeta.parameters)
+					{
+						if(param.name IS "response" AND isDefined('arguments.response')) { args.response = arguments.response }
+						
+					}
+
+					local.afterCheck.after(argumentCollection=args);
+				}
+				else if(isStruct(local.afterCheck.after))
+				{
+					if(structKeyExists(local.afterCheck.after,"unit") AND arguments.depth IS 1)
+					{
+						local.afterCheck.after.unit();
+					}
+				}
+			}
+
 		}
 	}
 
@@ -118,6 +218,31 @@ component accessors="true"{
 					break;
 				}
 			}
+		}
+	}
+
+	private function assert(value=true,message=""){
+
+		if(arguments.value IS false)
+		{			
+			local.call = callStackGet()[2]
+		
+			local.specFile = fileOpen(local.call.template);
+			
+			local.readCount = 0;
+			while(!fileIsEOF(local.specFile))
+			{
+				local.readCount = local.readCount + 1;
+				local.code = fileReadLine(local.specFile);
+				
+				if(local.readCount IS local.call.lineNumber)
+				{
+					local.code = replace(local.code,"assert(","","all");
+					local.code = left(local.code,len(local.code) -1);
+					throw("Assertion failed <br /> Message Was:#arguments.message# <br />Called from: #local.call.template# <br />Line: #local.readCount# <br /> Asserted: #trim(local.code)#");
+				}
+			}
+			
 		}
 	}
 

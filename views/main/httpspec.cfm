@@ -1,7 +1,5 @@
 <cfsetting showdebugoutput="false">
-<cfscript>
-	http url="http://dev.cfspec.com?action=main.httpspec";
-	
+<cfscript>	
 	response = serialize(CGI);
 	writeOutput(response);
 	request.layout = false;

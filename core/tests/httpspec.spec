@@ -5,12 +5,11 @@
 			"?action=main.httpspec":{
 				get:{
 					"Should return hello":{
+						before:function(){
+							request.doSomething = true;							
+						},
 						given:{														
-							url:"",
-							body:"",
-							formfields:[
-								{name="test", value="value1"}
-							],
+							url:"",							
 							cookies:[
 								{name="test", value="value1"}
 							]
@@ -24,14 +23,24 @@
 							httpVersion:"HTTP/1.1",
 							mimetype:"text/html",														
 							assert:function(response){
-
+								assert(true);
+								assert(request.doSomething);
+								return true;
 							}
+						},
+						after:function(response){
+							assert(request.doSomething);
+							assert(isStruct(arguments.response));
 						}					
 					}
 				},
 				put:{
 					"Should save hello":{
-						given:{							
+						given:{
+							//body:"",
+							// formfields:[
+							// 	{name="test", value="value1"}
+							// ],						
 							headers:[],
 							parameters:[]
 						},
