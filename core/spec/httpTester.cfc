@@ -40,6 +40,12 @@ component accessors="true"{
 
 			if(structKeyExists(local.context,"given"))
 			{
+
+				if(isClosure(local.context.given))
+				{
+					local.context.given = local.context.given();
+				}
+
 				if(structKeyExists(local.context.given,"url"))
 				{
 					httpparam type="url" name="url" value="#getOrCallValue(local.context.given.url)#";

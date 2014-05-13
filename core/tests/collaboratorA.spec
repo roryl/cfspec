@@ -1,7 +1,7 @@
 <cfscript>
 spec = {
 	class:"cfspec.core.tests.collaboratorA",
-	mockObjects:["collaboratorB"],
+	
 	tests:{
 		getComplexValue:{
 			"Should return the complex value from B":{

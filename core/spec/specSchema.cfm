@@ -17,15 +17,7 @@ schema = {
 			types:"function/closure",
 			required:false,
 			example:[{code:'factory:function(){ return new componentUnderTest();}'}]
-		},
-		{
-			title:"mockObjects",
-			description:"The objects within the class that we will be overridden with mocks. Each object to be mocked must be within the variables scope. 
-						 It is not necessary that the mockable object be passed within the constructor",
-			types:"array",
-			required:false,
-			example:[{code:'mockObjects:["Object1","Object2"]'}]
-		},
+		},		
 		{
 			title:"setup",
 			description:"A function defining custom code to execute at the startup of the test case. This runs only once per spec",
