@@ -312,7 +312,7 @@ component accessors="true" {
 
 							o('public function #local.method#_#local.clean#(){');
 								tab("+1");
-								o('test = new cfspec.core.spec.httpTester(spec=variables.spec, method="#local.method#", resource="#local.uri#", scenario="#local.context#")');
+								o('test = new cfspec.core.spec.httpTester(specPath="#variables.specFilePath#", method="#local.method#", resource="#local.uri#", scenario="#local.context#")');
 								o('test.doHTTPCall();')
 								tab("-1");
 							o('}')
@@ -336,7 +336,10 @@ component accessors="true" {
 		local.output = replaceNoCase(local.output,"?","","all");
 		local.output = replaceNoCase(local.output,"/","_","all");
 		local.output = replaceNoCase(local.output,"=","_","all");
-		local.output = replaceNoCase(local.output,".","_","all");	
+		local.output = replaceNoCase(local.output,".","_","all");
+		local.output = replaceNoCase(local.output,"&","_","all");	
+		local.output = replaceNoCase(local.output,"{","_","all");	
+		local.output = replaceNoCase(local.output,"}","_","all");	
 		return local.output;
 	}
 

@@ -13,8 +13,12 @@ component accessors="true"{
 	property name="Resource";
 
 
-	public function init(required struct spec, required string method, required string scenario, required string resource){
-		variables.spec = arguments.spec;
+	public function init(required string specPath, required string method, required string scenario, required string resource){
+
+		//Load the spec path into this variables scope. It is neceessary that the spec be included here so that any function calls from within the spec are in the scope of this object
+		variables.spec = "";
+		include template="#arguments.specPath#";
+		
 		variables.method = arguments.method;		
 		variables.resource = arguments.resource;
 		variables.scenario = arguments.scenario;
@@ -35,6 +39,28 @@ component accessors="true"{
 		];
 
 		doBefore(local.specLevels);
+
+		//The given function can override placeholders in the URL given for the test
+		if(structKeyExists(local.context,"given"))
+		{
+
+
+
+			local.given = getOrCallValue(local.context.given);
+
+			request.given = local.given;
+
+			if(structKeyExists(local.given,"path"))
+			{
+				local.path = getOrCallValue(local.given.path);
+
+				//For each of the path items, replace the variable requested with the value
+				for(local.item IN local.path)
+				{
+					local.uri = replaceNoCase(local.uri, "{#local.item#}", local.path[local.item]);
+				}
+			}
+		}		
 
 		http url="http://#local.uri#" method="#variables.method#" result="local.cfhttp" {
 
@@ -60,7 +86,7 @@ component accessors="true"{
 				{
 					for(local.field IN local.context.given.formfields)
 					{
-						httpparam type="formfield" name="#local.field.name#" value="#getOrCallValue(local.field.value)#";	
+						httpparam type="formfield" name="#local.field#" value="#getOrCallValue(local.context.given.formfields[local.field])#";	
 					}
 					
 				}
@@ -89,11 +115,24 @@ component accessors="true"{
 
 	private function assertResponseValues(actualValue, expectedValue, type)
 	{
-		local.expected = getOrCallValue(arguments.expectedValue);
-		if(arguments.actualValue IS NOT local.expected)
+		if(isClosure(arguments.expectedValue))
 		{
-			throw("The value of #arguments.type# was not correct. The specification expected #local.expected# but received #arguments.actualValue#");
+			local.expected = arguments.expectedValue(arguments.actualValue);
+			if(local.expected IS NOT true)
+			{
+				throw("The assertion for #arguments.type# failed. It returned false");
+			}
 		}
+		else
+		{
+			local.expected = arguments.expectedValue;
+			if(arguments.actualValue IS NOT local.expected)
+			{
+				throw("The value of #arguments.type# was not correct. The specification expected #local.expected# but received #arguments.actualValue#");
+			}		
+		}
+		
+		
 	}
 
 	public function doAsserts(required specContext, required response){

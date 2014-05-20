@@ -50,6 +50,20 @@
 					}
 				}
 				
+			},
+			"?action=main.httpspec&test={test}":{
+				get:{
+					"Should switch out the variable in the URL with a path":{
+						given:{
+							path:{
+								test:"value"
+							}
+						},
+						then:{
+							returns:"isHTML"
+						}
+					}
+				}
 			}
 		}
 	}

@@ -4,7 +4,7 @@ component extends="framework" output="false"
 	
 	this.mappings["/cfspec"] = expandPath("../");
 	this.mappings["/affiliates"] = "/var/www/affiliates";
-	this.mappings["/mxunit"] = getDirectoryFromPath(getBaseTemplatePath()) & "libraries/mxunit";
+	this.mappings["/mxunit"] = expandPath("../") & "libraries/mxunit";
 
 
 	/*framework defaults (as struct literal):
