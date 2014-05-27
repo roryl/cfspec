@@ -102,6 +102,8 @@ component accessors="true"{
 			}
 		}
 
+		doAssertReturns(local.cfhttp.fileContent, local.context.then.returns);
+
 		//Do all of the standard HTTP response checks (for mime type, response code, etc)
 		doAssertStandardHTTPResponses(local.cfhttp, local.context);
 		
@@ -218,6 +220,21 @@ component accessors="true"{
 				}
 			}
 
+		}
+	}
+
+	public function doAssertReturns(required string httpFileContent, required responseType)
+	{
+		switch(arguments.responseType)
+		{
+			case "isJson":				
+				return isJson(arguments.httpFileContent);
+			break;
+
+			case "isHTML":
+				local.find = reFindNoCase("<*>",arguments.httpFileContent);
+				return local.find GT 0;
+			break;
 		}
 	}
 

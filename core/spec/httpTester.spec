@@ -50,6 +50,35 @@
 						throws:"The assertion failed"
 					}
 				}
+			},
+			doAssertReturns:{
+				"Should test for a json string if given a json string":{
+					given:{
+						httpFileContent:"{test:'test'}",
+						responseType:"isJson"
+					},
+					then:{
+						returns:true
+					}
+				},
+				"Should fail for a json string which is not really json":{
+					given:{
+						httpFileContent:"test",
+						responseType:"isJson"
+					},
+					then:{
+						returns:false
+					}
+				},
+				"Should test for an HTML string if given a json string":{
+					given:{
+						httpFileContent:"<html><body></body></html>",
+						responseType:"isHTML"
+					},
+					then:{
+						returns:true
+					}
+				}
 			}
 		}
 	}
