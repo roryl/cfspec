@@ -25,8 +25,14 @@ component accessors="true"{
 		return this;
 	}
 
+	private function doLog(string text){
+		writeLog(file="cfspec", text=arguments.text);
+	}
+
 	public function doHTTPCall()
 	{
+		doLog("Start doHTTPCall");
+
 		local.URI = variables.spec.url & variables.resource;
 		
 		local.context = variables.spec.tests[variables.resource][variables.method][variables.scenario];
@@ -100,7 +106,9 @@ component accessors="true"{
 					
 				}
 			}
+			doLog("Start actual HTTPCall");
 		}
+		doLog("End actual HTTPCall");
 
 		doAssertReturns(local.cfhttp.fileContent, local.context.then.returns);
 
@@ -111,6 +119,7 @@ component accessors="true"{
 
 		doAfter(local.specLevels, local.cfhttp);
 
+		doLog("End doHTTPCall");
 		return local.cfhttp;
 
 	}
@@ -119,7 +128,20 @@ component accessors="true"{
 	{
 		if(isClosure(arguments.expectedValue))
 		{
-			local.expected = arguments.expectedValue(arguments.actualValue);
+
+			local.funcMeta = getMetaData(arguments.expectedValue);
+			local.args = {}
+			for(param in local.funcMeta.parameters)
+			{
+				if(param.name IS "json") { 					
+					args.json = deserializeJson(arguments.actualValue);
+				}
+				else {
+					args[1] = arguments.actualValue;
+				}				
+			}		
+
+			local.expected = arguments.expectedValue(argumentCollection=args);
 			if(local.expected IS NOT true)
 			{
 				throw("The assertion for #arguments.type# failed. It returned false");

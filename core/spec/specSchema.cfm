@@ -4,7 +4,7 @@ schema = {
 	children:[
 		{
 			title:"class",
-			description:"A fully qualified path to the component being specified",
+			description:"A fully qualified path to the component being specified. This is used to locate the class under test and / or to instantiate it",
 			example:[
 				{code:'class:"a.fully.qualified.path"'}
 			],
@@ -13,10 +13,10 @@ schema = {
 		},
 		{
 			title:"factory",
-			description:"A function that returns the fully constructed component under test.",
+			description:"A function that returns the fully constructed component under test. This is used when you want to have a custom construction of the class for purposes of the tests",
 			types:"function/closure",
 			required:false,
-			example:[{code:'factory:function(){ return new componentUnderTest();}'}]
+			example:[{code:'factory:function(){ return new componentUnderTest(customArgument=test);}'}]
 		},		
 		{
 			title:"setup",

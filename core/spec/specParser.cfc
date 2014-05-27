@@ -308,7 +308,7 @@ component accessors="true" {
 								o('contextTestSetup()')
 							}
 
-							local.clean = cleanURI(local.uri);
+							local.clean = cleanURI(local.uri & local.context);
 
 							o('public function #local.method#_#local.clean#(){');
 								tab("+1");
@@ -339,7 +339,8 @@ component accessors="true" {
 		local.output = replaceNoCase(local.output,".","_","all");
 		local.output = replaceNoCase(local.output,"&","_","all");	
 		local.output = replaceNoCase(local.output,"{","_","all");	
-		local.output = replaceNoCase(local.output,"}","_","all");	
+		local.output = replaceNoCase(local.output,"}","_","all");
+		local.output = replaceNoCase(local.output," ","_","all");
 		return local.output;
 	}
 
