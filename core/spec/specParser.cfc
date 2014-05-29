@@ -308,7 +308,7 @@ component accessors="true" {
 								o('contextTestSetup()')
 							}
 
-							local.clean = cleanURI(local.uri & local.context);
+							local.clean = cleanURI(local.uri & "_" & local.context);
 
 							o('public function #local.method#_#local.clean#(){');
 								tab("+1");

@@ -16,8 +16,9 @@ component accessors="true"{
 	public function init(required string specPath, required string method, required string scenario, required string resource){
 
 		//Load the spec path into this variables scope. It is neceessary that the spec be included here so that any function calls from within the spec are in the scope of this object
+		variables.specPath = arguments.specPath;
 		variables.spec = "";
-		include template="#arguments.specPath#";
+		include template="#variables.specPath#";
 		
 		variables.method = arguments.method;		
 		variables.resource = arguments.resource;
@@ -27,6 +28,40 @@ component accessors="true"{
 
 	private function doLog(string text){
 		writeLog(file="cfspec", text=arguments.text);
+	}
+
+	public function runHTTPSpec(specPath, method, scenario, resource){
+		
+		//Set default values to be the same spec that was already defined here
+		local.args = {
+			specPath:variables.specPath,
+			method:variables.method,
+			scenario:variables.scenario,
+			resource:variables.resource
+		}
+		
+		//Override any variables from the arguments that were passed in
+		for(local.key in arguments)
+		{
+			if(NOT isNull(arguments[key]))
+			{
+				local.args[key] = arguments[key];
+			}			
+		}	
+
+		local.httpTester = new httpTester(argumentCollection=local.args);
+		local.result = local.httpTester.doHTTPCall();
+		return local.result;
+	}
+
+	public function getCookiesAsStruct(required query cookiesQuery)
+	{
+		local.result = {};
+		for(row in arguments.cookiesQuery)
+		{
+			local.result[row.name] = row;
+		}
+		return local.result;
 	}
 
 	public function doHTTPCall()
@@ -49,8 +84,6 @@ component accessors="true"{
 		//The given function can override placeholders in the URL given for the test
 		if(structKeyExists(local.context,"given"))
 		{
-
-
 
 			local.given = getOrCallValue(local.context.given);
 
@@ -99,7 +132,9 @@ component accessors="true"{
 
 				if(structKeyExists(local.context.given,"cookies"))
 				{
-					for(local.cookie IN local.context.given.cookies)
+					local.cookies = getOrCallValue(local.context.given.cookies);
+					
+					for(local.cookie IN local.cookies)
 					{
 						httpparam type="cookie" name="#local.cookie.name#" value="#getOrCallValue(local.cookie.value)#";	
 					}
@@ -109,6 +144,7 @@ component accessors="true"{
 			doLog("Start actual HTTPCall");
 		}
 		doLog("End actual HTTPCall");
+		request.httpTesterResponse = local.cfhttp;
 
 		doAssertReturns(local.cfhttp.fileContent, local.context.then.returns);
 
@@ -131,13 +167,18 @@ component accessors="true"{
 
 			local.funcMeta = getMetaData(arguments.expectedValue);
 			local.args = {}
-			for(param in local.funcMeta.parameters)
+			for(local.param in local.funcMeta.parameters)
 			{
-				if(param.name IS "json") { 					
-					args.json = deserializeJson(arguments.actualValue);
+				if(local.param.name IS "json") 
+				{ 	
+					if(NOT isJson(arguments.actualValue))
+					{						
+						throw("The parameter to the function expected a json string but did not receive one from the API call");
+					}
+					local.args.json = deserializeJson(arguments.actualValue);
 				}
 				else {
-					args[1] = arguments.actualValue;
+					local.args[1] = arguments.actualValue;
 				}				
 			}		
 
