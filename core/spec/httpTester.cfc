@@ -54,18 +54,46 @@ component accessors="true"{
 		return local.result;
 	}
 
-	public function getCookiesAsStruct(required query cookiesQuery)
+	public function getCookiesAsStruct(required cookiesData)
 	{
-		local.result = {};
-		for(row in arguments.cookiesQuery)
+		//Old code based on Railo 4.2 cookies as a query
+		// local.result = {};
+		// for(row in arguments.cookiesData)
+		// {
+		// 	local.result[row.name] = row;
+		// }
+
+		if(isArray(arguments.cookiesData))
 		{
-			local.result[row.name] = row;
-		}
+			local.result = {};
+			for(local.cookieItem in arguments.cookiesData)
+			{
+				//Get the first list element from the cookie
+				local.cookieString = trim(listFirst(local.cookieItem,";"));
+
+				//Extract the name
+				local.cookieName = trim(listFirst(local.cookieString,"="));
+				
+				//Extract the value
+				local.cookieValue = trim(listLast(local.cookieString,"="));
+				
+				//Set the name and the value into the response
+				local.result[local.cookieName].value = local.cookieValue;
+			}
+		}	
+
 		return local.result;
+	}
+
+	public function dumpAbort(required variable)
+	{
+		writeDump(arguments.variable);
+		abort;
 	}
 
 	public function doHTTPCall()
 	{
+		
 		doLog("Start doHTTPCall");
 
 		local.URI = variables.spec.url & variables.resource;
@@ -121,19 +149,28 @@ component accessors="true"{
 					httpparam type="body" value="#getOrCallValue(local.context.given.body)#";
 				}
 
-				if(structKeyExists(local.context.given,"formfields"))
+				if(variables.method IS "put")
 				{
-					for(local.field IN local.context.given.formfields)
-					{
-						httpparam type="formfield" name="#local.field#" value="#getOrCallValue(local.context.given.formfields[local.field])#";	
-					}
-					
+					httpparam type="body" value="#serialize(getOrCallValue(local.context.given.formFields))#";
 				}
+				else{
+					if(structKeyExists(local.context.given,"formfields"))
+					{
+						for(local.field IN local.context.given.formfields)
+						{
+							httpparam type="formfield" name="#local.field#" value="#getOrCallValue(local.context.given.formfields[local.field])#";	
+						}
+						
+					}
+				}
+				
+
+				
 
 				if(structKeyExists(local.context.given,"cookies"))
 				{
 					local.cookies = getOrCallValue(local.context.given.cookies);
-					
+
 					for(local.cookie IN local.cookies)
 					{
 						httpparam type="cookie" name="#local.cookie.name#" value="#getOrCallValue(local.cookie.value)#";	
