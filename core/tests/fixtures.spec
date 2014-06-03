@@ -3,14 +3,17 @@ This spec uses all of the setup, tearDown, before and after functions are every 
 It saves each call into the request scope so that we can take a look at it afterwards and ensure everything was properly called
 --->
 <cfscript>
+
 	spec = {
 		class:"cfspec.core.tests.fixtures",
 		mockObjects:[""],
 		factory:function(){			
+
 			return createObject("component","fixtures").init();
 		},
 		setup:function(){
 			request.fixturesCalls.setup_spec = true;
+			request.fixturesOrder = [];
 			request.fixturesOrder = ["setup_spec"];
 		},
 		tearDown:function(){
@@ -20,7 +23,7 @@ It saves each call into the request scope so that we can take a look at it after
 		tests:{
 			
 			setup:function(){				
-				request.fixturesCalls.setup_all_tests = true;
+				request.fixturesCalls.setup_all_tests = true;				
 				request.fixturesOrder.append("setup_all_tests");				
 			},
 			before:function(object){						
@@ -45,8 +48,7 @@ It saves each call into the request scope so that we can take a look at it after
 						request.fixturesCalls.after_all_scenarios = true;
 						request.fixturesOrder.append("after_all_scenarios");
 				},	
-				"Look for calls to all of the fixtures":{
-					
+				"Look for calls to all of the fixtures":{					
 					setup:function(){
 						request.fixturesCalls.setup_specific_scenario = true;
 						request.fixturesOrder.append("setup_specific_scenario");
@@ -74,7 +76,7 @@ It saves each call into the request scope so that we can take a look at it after
 						request.fixturesOrder.append("after_specific_scenario");
 
 						//Assert that they were called in the right order. We are doing the assert
-						//here instead of in the normal assertion area because we want to check that the preceding afters are all called
+						//here instead of in the normal assertion area because we want to check that the preceding afters are all called						
 						assert(request.fixturesOrder[1] IS "setup_spec");
 						assert(request.fixturesOrder[2] IS "setup_all_tests");
 						assert(request.fixturesOrder[3] IS "setup_all_scenarios");
@@ -162,6 +164,7 @@ It saves each call into the request scope so that we can take a look at it after
 						returns:true,
 						assert:function(){
 							assert(structKeyExists(request.fixturesCalls,"factory_all_scenarios"));
+							request.fixturesOrder = [];
 							return true;
 						}
 					}

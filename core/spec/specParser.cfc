@@ -374,23 +374,26 @@ component accessors="true" {
 						continue;	
 					}
 					
-					//IF there was a setup function specified, it was used above. But now we need to delete it as we don't need it for the tests
-					if(structKeyExists(spec.tests[name],"setup"))
-					{
-						//Duplicate the test so that we can delete values without affecting the original
-						var func = duplicate(spec.tests[name]);
-						//Delete the seutp function which is only going to leave the contexts under test
-						structDelete(func,"setup");
-					}	
-					else{
-						var func = spec.tests[name];
-					}
+					// //IF there was a setup function specified, it was used above. But now we need to delete it as we don't need it for the tests
+					// if(structKeyExists(spec.tests[name],"setup"))
+					// {
+					// 	//Duplicate the test so that we can delete values without affecting the original
+					// 	var func = duplicate(spec.tests[name]);
+					// 	//Delete the seutp function which is only going to leave the contexts under test
+					// 	structDelete(func,"setup");
+					// }	
+					// else{
+					// 	var func = spec.tests[name];
+					// }
+					var func = spec.tests[name];
 
 					for(var context in func)//For each of the contexts for this function that we are testing
 					{						
 						//Skip any before contexts as they should not be called
 						if(context IS "before" OR
-						   context IS "after"){
+						   context IS "after" OR
+						   context IS "setup" OR
+						   context IS "factory"){
 							continue;	
 						}
 
@@ -401,6 +404,15 @@ component accessors="true" {
 						tab(2);
 							o('request.mockDepth = 0');
 							o('request.funcCounts = {}');
+
+						//Setup at the all tests level
+						if(structKeyExists(spec,"setup"))
+						{
+							o('//Get the setup function for the test')
+							o('var setupSpec = variables.spec.setup')
+							o('//Call the setup function for the test')
+							o('setupSpec()')						
+						}
 
 						//Setup at the all tests level
 						if(structKeyExists(spec.tests,"setup"))
