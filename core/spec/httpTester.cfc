@@ -124,7 +124,8 @@ component accessors="true"{
 				//For each of the path items, replace the variable requested with the value
 				for(local.item IN local.path)
 				{
-					local.uri = replaceNoCase(local.uri, "{#local.item#}", local.path[local.item]);
+					local.value = getOrCallValue(local.path[local.item]);					
+					local.uri = replaceNoCase(local.uri, "{#local.item#}", local.value);
 				}
 			}
 		}		
@@ -149,9 +150,19 @@ component accessors="true"{
 					httpparam type="body" value="#getOrCallValue(local.context.given.body)#";
 				}
 
-				if(variables.method IS "put")
+				if(variables.method IS "put")				
 				{
-					httpparam type="body" value="#serialize(getOrCallValue(local.context.given.formFields))#";
+					if(structKeyExists(local.context.given,"formfields"))
+					{
+						local.fieldString = "";
+						for(local.field in local.context.given.formfields)
+						{
+							local.fieldString &= "#local.field#=#urlEncode(local.context.given.formfields[local.field])#";
+						}
+						httpparam type="header" name="Content-Type" value="application/x-www-form-urlencoded; charset=UTF-8";
+						httpparam type="body" value="#local.fieldString#";
+					}
+					
 				}
 				else{
 					if(structKeyExists(local.context.given,"formfields"))
@@ -162,10 +173,7 @@ component accessors="true"{
 						}
 						
 					}
-				}
-				
-
-				
+				}				
 
 				if(structKeyExists(local.context.given,"cookies"))
 				{
