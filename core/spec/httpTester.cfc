@@ -11,6 +11,7 @@ component accessors="true"{
 	property name="method";
 	property name="Host";
 	property name="Resource";
+	property name="afterTests";
 
 
 	public function init(required string specPath, required string method, required string scenario, required string resource){
@@ -198,7 +199,9 @@ component accessors="true"{
 		
 		doAsserts(local.context, local.cfhttp);
 
-		doAfter(local.specLevels, local.cfhttp);
+		doAfter(local.specLevels, local.cfhttp);		
+
+		setAfterTests(local.specLevels, local.cfhttp);
 
 		doLog("End doHTTPCall");
 		return local.cfhttp;
@@ -264,6 +267,8 @@ component accessors="true"{
 		}
 	}
 
+
+
 	/**
 	* doBefore checks and runs the before clauses from the specification. 
 	*/
@@ -318,6 +323,42 @@ component accessors="true"{
 					}
 
 					local.afterCheck.after(argumentCollection=args);
+				}
+				else if(isStruct(local.afterCheck.after))
+				{
+					if(structKeyExists(local.afterCheck.after,"unit") AND arguments.depth IS 1)
+					{
+						local.afterCheck.after.unit();
+					}
+				}
+			}
+
+		}
+	}
+
+	/**
+	* doAfterTests regesters any afterTests to be called at the very end of all test runs
+	*/
+	public function setAfterTests(required specLevels, response)
+	{
+
+		variables.afterTests = [];
+
+		for(local.afterCheck in arguments.specLevels)
+		{
+			if(structKeyExists(local.afterCheck,"afterTests"))
+			{
+				//If the after is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
+				if(isClosure(local.afterCheck.afterTests))
+				{
+					// afterMeta = getMetaData(local.afterCheck.afterTests);
+					// args = {}
+					// for(param in afterMeta.parameters)
+					// {
+					// 	if(param.name IS "response" AND isDefined('arguments.response')) { args.response = arguments.response }						
+					// }
+
+					variables.afterTests.append({func=local.afterCheck.afterTests, response = arguments.response});			
 				}
 				else if(isStruct(local.afterCheck.after))
 				{

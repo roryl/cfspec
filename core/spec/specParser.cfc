@@ -233,6 +233,7 @@ component accessors="true" {
 				o('//Call the setup function that is defined in the spec')
 				o('spec.setup();')
 			}
+
 			tab(0);tab(1);
 			o('}')
 			nl()
@@ -246,7 +247,23 @@ component accessors="true" {
 			o('component extends="cfspec.core.spec.testCase" {');
 			nl()
 				//Component Body
-				tab(1)
+				tab("+1")
+
+				o('variables.afterTestsCalls = []');				
+
+				o('public function afterTests()')
+				o('{')
+				tab("+1")
+						o('for(local.afterTest in variables.afterTestsCalls)')
+						o('{')
+						tab("+1")
+								o('local.afterTest.func(local.afterTest.response)');
+						tab("-1");
+						o('}')
+				tab("-1")
+				o('}')
+				nl();
+
 				buildBeforeTests(local.spec);
 
 				for(local.uri IN spec.tests)
@@ -313,13 +330,24 @@ component accessors="true" {
 							o('public function #local.method#_#local.clean#(){');
 								tab("+1");
 								o('test = new cfspec.core.spec.httpTester(specPath="#variables.specFilePath#", method="#local.method#", resource="#local.uri#", scenario="#local.context#")');
-								o('test.doHTTPCall();')
+								o('local.result = test.doHTTPCall();')
+
+								o('local.afterTests = test.getAfterTests();')
+								o('for(local.test in local.afterTests)')
+								o('{')
+									tab("+1")
+									o('variables.afterTestsCalls.append(local.test);')
+									tab("-1")
+								o('}')
+
 								tab("-1");
 							o('}')
 							nl();
 						}
 					}
 				}
+
+
 
 
 				tab(-1);
