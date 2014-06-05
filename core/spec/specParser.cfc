@@ -249,12 +249,12 @@ component accessors="true" {
 				//Component Body
 				tab("+1")
 
-				o('variables.afterTestsCalls = []');				
+				o('request.afterTestsCalls = []');				
 
 				o('public function afterTests()')
 				o('{')
 				tab("+1")
-						o('for(local.afterTest in variables.afterTestsCalls)')
+						o('for(local.afterTest in request.afterTestsCalls)')
 						o('{')
 						tab("+1")
 								o('local.afterTest.func(local.afterTest.response)');
@@ -281,7 +281,7 @@ component accessors="true" {
 						}
 
 						for(local.context IN spec.tests[local.uri][local.method])
-						{
+						{							
 							//These keywords are not actually scenarios and so they can be skipped
 							if(local.context IS "setup" OR local.context IS "before" OR local.context IS "after" OR local.context IS "factory"){
 								continue;	
@@ -332,13 +332,13 @@ component accessors="true" {
 								o('test = new cfspec.core.spec.httpTester(specPath="#variables.specFilePath#", method="#local.method#", resource="#local.uri#", scenario="#local.context#")');
 								o('local.result = test.doHTTPCall();')
 
-								o('local.afterTests = test.getAfterTests();')
-								o('for(local.test in local.afterTests)')
-								o('{')
-									tab("+1")
-									o('variables.afterTestsCalls.append(local.test);')
-									tab("-1")
-								o('}')
+								// o('local.afterTests = test.getAfterTests();')
+								// o('for(local.test in local.afterTests)')
+								// o('{')
+								// 	tab("+1")
+								// 	o('request.afterTestsCalls.append(local.test);')
+								// 	tab("-1")
+								// o('}')
 
 								tab("-1");
 							o('}')

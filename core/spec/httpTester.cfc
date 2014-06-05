@@ -51,7 +51,8 @@ component accessors="true"{
 		}	
 
 		local.httpTester = new httpTester(argumentCollection=local.args);
-		local.result = local.httpTester.doHTTPCall();
+		local.result = local.httpTester.doHTTPCall();		
+
 		return local.result;
 	}
 
@@ -129,7 +130,9 @@ component accessors="true"{
 					local.uri = replaceNoCase(local.uri, "{#local.item#}", local.value);
 				}
 			}
-		}		
+		}
+
+		doLog(local.uri);
 
 		http url="http://#local.uri#" method="#variables.method#" result="local.cfhttp" {
 
@@ -341,9 +344,6 @@ component accessors="true"{
 	*/
 	public function setAfterTests(required specLevels, response)
 	{
-
-		variables.afterTests = [];
-
 		for(local.afterCheck in arguments.specLevels)
 		{
 			if(structKeyExists(local.afterCheck,"afterTests"))
@@ -358,7 +358,7 @@ component accessors="true"{
 					// 	if(param.name IS "response" AND isDefined('arguments.response')) { args.response = arguments.response }						
 					// }
 
-					variables.afterTests.append({func=local.afterCheck.afterTests, response = arguments.response});			
+					request.afterTestsCalls.append({func=local.afterCheck.afterTests, response = arguments.response});			
 				}
 				else if(isStruct(local.afterCheck.after))
 				{
