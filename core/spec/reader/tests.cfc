@@ -33,16 +33,51 @@ component accessors="true" {
 
 	public function getAllTests()
 	{
-		
-		local.tests = [];
-		for(local.test in variables.tests)
-		{
-			local.testStruct = structNew();			
 
-			local.testStruct.insert(local.test,variables.tests[local.test]);			
-			local.tests.append(new test(variables.specObject,local.testStruct));			
+		if(structKeyExists(variables.specObject.getSpecSchema(),"class"))
+		{
+			local.tests = [];
+			for(local.test in variables.tests)
+			{
+				local.testStruct = structNew();			
+
+				local.testStruct.insert(local.test,variables.tests[local.test]);			
+				local.tests.append(new test(variables.specObject,local.testStruct));			
+			}
+			return local.tests;	
 		}
-		return local.tests;
+
+		if(structKeyExists(variables.specObject.getSpecSchema(),"url"))
+		{
+			local.tests = [];
+			for(local.resource in variables.tests)
+			{
+				if(listContains("before,setup,after,afterTests",local.resource)){
+					continue;
+				}
+				
+
+				for(local.method in variables.tests[local.resource])
+				{
+					if(listContains("before,setup,after,afterTests",local.resource)){
+						continue;
+					}
+					
+					local.testStruct = structNew();				
+					local.testStruct.insert("#local.method#: #local.resource#",variables.tests[local.resource][local.method]);
+					local.tests.append(new test(variables.specObject,local.testStruct));			
+				}			
+				// }catch(any e)
+				// {
+				// 	writeDump(local.resource);
+				// 	abort;
+				// }
+				
+			}
+			return local.tests;	
+		}
+
+		
 	}
 
 

@@ -97,7 +97,7 @@ component accessors="true" {
 
 	private function getDirectoryFiles(path,ignore=[],filter="%.spec%")
 	{
-		local.start = getTickCount();
+		local.start = getTickCount();		
 		local.directories = directoryList(arguments.path,false,"query");
 		variables.timeForDirectory = queryNew("path,time");
 		//Append the fileName to the directory
