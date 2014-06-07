@@ -161,8 +161,9 @@ component accessors="true"{
 						local.fieldString = "";
 						for(local.field in local.context.given.formfields)
 						{
-							local.fieldString &= "#local.field#=#urlEncode(local.context.given.formfields[local.field])#";
+							local.fieldString &= "#local.field#=#urlEncode(local.context.given.formfields[local.field])#&";
 						}
+						
 						httpparam type="header" name="Content-Type" value="application/x-www-form-urlencoded; charset=UTF-8";
 						httpparam type="body" value="#local.fieldString#";
 					}
@@ -211,45 +212,7 @@ component accessors="true"{
 
 	}
 
-	private function assertResponseValues(actualValue, expectedValue, type)
-	{
-		if(isClosure(arguments.expectedValue))
-		{
-
-			local.funcMeta = getMetaData(arguments.expectedValue);
-			local.args = {}
-			for(local.param in local.funcMeta.parameters)
-			{
-				if(local.param.name IS "json") 
-				{ 	
-					if(NOT isJson(arguments.actualValue))
-					{						
-						throw("The parameter to the function expected a json string but did not receive one from the API call");
-					}
-					local.args.json = deserializeJson(arguments.actualValue);
-				}
-				else {
-					local.args[1] = arguments.actualValue;
-				}				
-			}		
-
-			local.expected = arguments.expectedValue(argumentCollection=args);
-			if(local.expected IS NOT true)
-			{
-				throw("The assertion for #arguments.type# failed. It returned false");
-			}
-		}
-		else
-		{
-			local.expected = arguments.expectedValue;
-			if(arguments.actualValue IS NOT local.expected)
-			{
-				throw("The value of #arguments.type# was not correct. The specification expected #local.expected# but received #arguments.actualValue#");
-			}		
-		}
-		
-		
-	}
+	
 
 	public function doAsserts(required specContext, required response){
 		if(structKeyExists(arguments.specContext,"then"))
@@ -430,6 +393,47 @@ component accessors="true"{
 				}
 			}
 		}
+	}
+
+	private function assertResponseValues(actualValue, expectedValue, type)
+	{
+		if(isClosure(arguments.expectedValue))
+		{
+			local.funcMeta = getMetaData(arguments.expectedValue);
+			local.args = {}
+			for(local.param in local.funcMeta.parameters)
+			{
+				if(local.param.name IS "json") 
+				{ 	
+					if(NOT isJson(arguments.actualValue))
+					{						
+						throw("The parameter to the function expected a json string but did not receive one from the API call");
+					}
+					local.args.json = deserializeJson(arguments.actualValue);
+				}
+				else if(local.param.name IS "before")
+				{
+					local.args.before = variables.lastBefore;
+				}
+				else {
+					local.args[1] = arguments.actualValue;
+				}				
+			}		
+
+			local.expected = arguments.expectedValue(argumentCollection=args);
+			if(local.expected IS NOT true)
+			{
+				throw("The assertion for #arguments.type# failed. It returned false");
+			}
+		}
+		else
+		{
+			local.expected = arguments.expectedValue;
+			if(arguments.actualValue IS NOT local.expected)
+			{
+				throw("The value of #arguments.type# was not correct. The specification expected #local.expected# but received #arguments.actualValue#");
+			}		
+		}		
 	}
 
 	private function assert(value=true,message=""){
