@@ -331,7 +331,7 @@ component accessors="true" {
 								tab("+1");
 								o('test = new cfspec.core.spec.httpTester(specPath="#variables.specFilePath#", method="#local.method#", resource="#local.uri#", scenario="#local.context#")');
 								o('local.result = test.doHTTPCall();')
-
+								o('writeOutput(local.result.fileContent)');
 								// o('local.afterTests = test.getAfterTests();')
 								// o('for(local.test in local.afterTests)')
 								// o('{')
