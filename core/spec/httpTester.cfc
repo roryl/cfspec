@@ -290,13 +290,13 @@ component accessors="true"{
 				//If the before is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
 				if(isClosure(local.beforeCheck.before))
 				{
-					local.beforeCheck.before();	
+					variables.lastBefore = getOrCallValue(local.beforeCheck.before);	
 				}
 				else if(isStruct(local.beforeCheck.before))
 				{
 					if(structKeyExists(local.beforeCheck.before,"unit") AND variables.depth IS 1)
 					{
-						local.beforeCheck.before.unit();
+						variables.lastBefore = local.beforeCheck.before.unit();
 					}
 				}
 				
@@ -461,7 +461,22 @@ component accessors="true"{
 	{
 		if(isClosure(arguments.value))
 		{
-			return arguments.value();
+			local.injectArgs = getMetaData(arguments.value);
+
+			local.args = {}
+			for(local.param in local.injectArgs.parameters)
+			{				
+				if(local.param.name IS "before" AND isDefined('variables.lastBefore')) 
+				{ 
+					args.before = variables.lastBefore 
+				}
+				else
+				{
+					throw("The previous before method that was called did not return a value. Ensure that it returns a value that can be passed")
+				}							
+			}
+
+			return arguments.value(argumentCollection=local.args);
 		}
 		else
 		{
