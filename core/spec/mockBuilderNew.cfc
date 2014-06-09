@@ -94,13 +94,16 @@ component output="false" displayname=""  {
 		Add a closure to make any private functions public. We will call this for every function call being tested
 		*/
 
-		arguments.object.makePublic = function(required functionName){
-			if(structKeyExists(this,arguments.functionName) AND getMetaData(this[arguments.functionName]).access IS "private")
-			{
-				this[arguments.functionName] = variables[arguments.functionName];
-			}
-		}
+		arguments.object.makePublic = this.publicOverride;
 		arguments.object.makePublic(arguments.functionName);
+	}
+
+	//Method to inject into the component under test in order to test private methods
+	public function publicOverride(required functionName){
+		if(structKeyExists(this,arguments.functionName) AND getMetaData(this[arguments.functionName]).access IS "private")
+		{
+			this[arguments.functionName] = variables[arguments.functionName];
+		}
 	}
 
 	

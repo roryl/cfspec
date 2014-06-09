@@ -2,10 +2,13 @@
 	function makePublic(required object, required funcName)
 	{
 		//Make the assert function public
-		arguments.object.override = function(funcName){
-			this[arguments.funcName] = variables[arguments.funcName];
-		}
+		arguments.object.override = overrideFunction;
 		variables.mockProxy.override(arguments.funcName);
+	}
+
+	public function overrideFunction(funcName)
+	{
+		this[arguments.funcName] = variables[arguments.funcName];
 	}
 
 	spec = {

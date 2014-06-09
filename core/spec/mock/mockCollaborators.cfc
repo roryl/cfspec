@@ -13,6 +13,9 @@ component output="false" displayname=""  {
 
 		local.object = arguments.object;
 		local.object.mockCollaboratorFunction = this.mockCollaboratorFunction;
+		local.object.overrideOnMissingMethod = this.overrideOnMissingMethod;
+		local.object.setFunctionsLocal = this.setFunctionsLocal;
+
 
 		//Get the collaborators from the spec
 		local.spec = "";
@@ -108,12 +111,8 @@ component output="false" displayname=""  {
 			//Copy the mockProxy's utility functions into the scope of the component so that any calls within this function can access them
 			local.utilities = new mockUtilities();
 			local.collaboratorReference.executeSQL = local.utilities.executeSQL;
-			local.collaboratorReference.genericQuery = local.utilities.genericQuery;
-
-			local.collaboratorReference.setFunctionsLocal = function(){
-				variables.executeSQL = this.executeSQL;
-				variables.genericQuery = this.genericQuery;
-			}
+			local.collaboratorReference.genericQuery = local.utilities.genericQuery;			
+			local.collaboratorReference.setFunctionsLocal = this.setFunctionsLocal;
 			local.collaboratorReference.setFunctionsLocal();
 
 		}
@@ -133,18 +132,7 @@ component output="false" displayname=""  {
 			}
 
 			//Add onMissingMethod to the object so that we can know which function was called and retreive the value that we just set into the this scope
-			local.collaboratorReference.onMissingMethod = function(missingMethodName,missingMethodArguments){
-
-				//If the saved value exists then we know we want to return just that value
-				if(structKeyExists(this,"#arguments.missingMethodName#_value")){
-					return this["#arguments.missingMethodName#_value"];
-				}
-				else{
-					//Otherwise we are going to call the function on the object mockProxy
-					evaluate("this._onMissingMethod(argumentCollection=arguments)");
-				}						
-				
-			}			
+			local.collaboratorReference.onMissingMethod = this.overrideOnMissingMethod
 		}
 
 		/*
@@ -158,7 +146,23 @@ component output="false" displayname=""  {
 
 	};
 
-	
+	public function setFunctionsLocal(){
+		variables.executeSQL = this.executeSQL;
+		variables.genericQuery = this.genericQuery;
+	}
+
+	public function overrideOnMissingMethod(missingMethodName,missingMethodArguments){
+
+		//If the saved value exists then we know we want to return just that value
+		if(structKeyExists(this,"#arguments.missingMethodName#_value")){
+			return this["#arguments.missingMethodName#_value"];
+		}
+		else{
+			//Otherwise we are going to call the function on the object mockProxy
+			evaluate("this._onMissingMethod(argumentCollection=arguments)");
+		}						
+		
+	}			
 
 	public function getSpecPathFromComponent(required component object)
 	{

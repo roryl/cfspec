@@ -10,6 +10,7 @@ component accessors="true"{
 	property name="spec" setter="false";
 	property name="test" hint="The structure for the current test";
 	property name="testName" hint="The function name of this test";
+	property name="friendlyName" hint="A friendly name for the test used when displaying the list of availavble tests";
 	property name="scenarios" hint="The scenarios under this test";
 
 	public function init(required spec spec, required struct test){

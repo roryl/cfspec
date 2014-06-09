@@ -46,5 +46,9 @@ component extends="mxunit.framework.testCase" {
 		}		
 		return local.result;
 	}
+
+	private function overrideSpec(spec){
+		variables.spec = arguments.spec;
+	}
 	
 }

@@ -526,11 +526,7 @@ component accessors="true" {
 						
 						
 						o('//Set the portion of the spec under test into the the test object so that we can use any values within the spec within the scope of the component under test')
-						o('test.setSpec = function(spec){')
-							tab("+1");
-							o('variables.spec = arguments.spec;')
-							tab("-1");
-							o('}')
+						o('test.setSpec = variables.overrideSpec')
 						o('test.setSpec(variables.spec.tests.#name#["#context#"]);')
 
 						o('//Pass the component under test to the mockBuilder. The mock builder will mock out state and dependencies as described by the spec')
