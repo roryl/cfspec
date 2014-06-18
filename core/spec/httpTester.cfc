@@ -14,7 +14,7 @@ component accessors="true"{
 	property name="afterTests";
 
 
-	public function init(required string specPath, required string method, required string scenario, required string resource){
+	public function init(required string specPath, required string method, required string scenario, required string resource, struct patch={}){
 
 		//Load the spec path into this variables scope. It is neceessary that the spec be included here so that any function calls from within the spec are in the scope of this object
 		variables.specPath = arguments.specPath;
@@ -24,6 +24,13 @@ component accessors="true"{
 		variables.method = arguments.method;		
 		variables.resource = arguments.resource;
 		variables.scenario = arguments.scenario;
+
+		if(structKeyExists(arguments,"patch") AND NOT structIsEmpty(arguments.patch))
+		{
+			patchSpec(arguments.patch);
+		}
+
+
 		return this;
 	}
 
@@ -31,14 +38,22 @@ component accessors="true"{
 		writeLog(file="cfspec", text=arguments.text);
 	}
 
-	public function runHTTPSpec(specPath, method, scenario, resource){
+	private function patchSpec(required struct patch){
+		for(local.key in arguments.patch)
+		{
+			local.keyRef = "[""" & replace(key,".","""][""","all") & """]";			
+			evaluate('variables.spec["tests"]["#variables.resource#"]["#variables.method#"]["#variables.scenario#"]#local.keyRef# = arguments.patch[local.key]');
+		}
+	}
+
+	public function runHTTPSpec(specPath, method, scenario, resource, patch={}){
 		
 		//Set default values to be the same spec that was already defined here
 		local.args = {
 			specPath:variables.specPath,
 			method:variables.method,
 			scenario:variables.scenario,
-			resource:variables.resource
+			resource:variables.resource			
 		}
 		
 		//Override any variables from the arguments that were passed in
