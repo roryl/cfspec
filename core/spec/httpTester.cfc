@@ -146,7 +146,13 @@ component accessors="true"{
 
 				if(structKeyExists(local.context.given,"url"))
 				{
-					httpparam type="url" name="url" value="#getOrCallValue(local.context.given.url)#";
+
+					local.urlFields = getOrCallValue(local.context.given.url);
+
+					for(local.field IN local.urlFields)
+					{
+						httpparam type="url" name="#local.field#" value="#getOrCallValue(local.urlFields[local.field])#";
+					}
 				}
 
 				if(structKeyExists(local.context.given,"body"))
