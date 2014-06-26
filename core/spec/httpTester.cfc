@@ -129,6 +129,8 @@ component accessors="true"{
 		//The given function can override placeholders in the URL given for the test
 		if(structKeyExists(local.context,"given"))
 		{
+			//Set the given into a variable that can be passed to the assert function
+			variables.lastGiven = local.context.given;
 
 			local.given = getOrCallValue(local.context.given);
 
@@ -137,11 +139,12 @@ component accessors="true"{
 			if(structKeyExists(local.given,"path"))
 			{
 				local.path = getOrCallValue(local.given.path);
-
+				variables.lastGiven.path = local.path;
 				//For each of the path items, replace the variable requested with the value
 				for(local.item IN local.path)
 				{
-					local.value = getOrCallValue(local.path[local.item]);					
+					local.value = getOrCallValue(local.path[local.item]);	
+					variables.lastGiven.path[local.item] = local.value;				
 					local.uri = replaceNoCase(local.uri, "{#local.item#}", local.value);
 				}
 			}
@@ -166,13 +169,17 @@ component accessors="true"{
 
 					for(local.field IN local.urlFields)
 					{
-						httpparam type="url" name="#local.field#" value="#getOrCallValue(local.urlFields[local.field])#";
+						local.value = getOrCallValue(local.urlFields[local.field]);
+						variables.lastGiven.url[local.field] = local.value;
+						httpparam type="url" name="#local.field#" value="#local.value#";
 					}
 				}
 
 				if(structKeyExists(local.context.given,"body"))
 				{
-					httpparam type="body" value="#getOrCallValue(local.context.given.body)#";
+					local.value = getOrCallValue(local.context.given.body);
+					variables.lastGiven.body = lastValue;
+					httpparam type="body" value="#local.value#";
 				}
 
 				if(variables.method IS "put")				
@@ -195,7 +202,9 @@ component accessors="true"{
 					{
 						for(local.field IN local.context.given.formfields)
 						{
-							httpparam type="formfield" name="#local.field#" value="#getOrCallValue(local.context.given.formfields[local.field])#";	
+							local.value = getOrCallValue(local.context.given.formfields[local.field]);
+							variables.lastGiven.formFields[local.field] = local.value
+							httpparam type="formfield" name="#local.field#" value="#local.value#";	
 						}
 						
 					}
@@ -204,10 +213,13 @@ component accessors="true"{
 				if(structKeyExists(local.context.given,"cookies"))
 				{
 					local.cookies = getOrCallValue(local.context.given.cookies);
-
+					variables.lastGiven.cookies = [];
 					for(local.cookie IN local.cookies)
 					{
-						httpparam type="cookie" name="#local.cookie.name#" value="#getOrCallValue(local.cookie.value)#";	
+
+						local.value = getOrCallValue(local.cookie.value);
+						variables.lastGiven.cookies.append({name:local.cookie.name, value:local.value});						
+						httpparam type="cookie" name="#local.cookie.name#" value="#local.value#";	
 					}
 					
 				}
@@ -239,8 +251,30 @@ component accessors="true"{
 		if(structKeyExists(arguments.specContext,"then"))
 		{
 			if(structKeyExists(arguments.specContext.then,"assert"))
-			{				
-				local.result = arguments.specContext.then.assert(arguments.response);
+			{	
+
+				local.funcMeta = getMetaData(arguments.specContext.then.assert);
+				local.args = {}
+				for(local.param in local.funcMeta.parameters)
+				{
+					if(local.param.name IS "response") 
+					{ 	
+						local.args.response = arguments.response;
+					}
+					else if (local.param.name IS "given")
+					{
+						local.args.given = variables.lastGiven;
+					}
+					else if(local.param.name IS "before")
+					{
+						local.args.before = variables.lastBefore;
+					}
+					else {
+						local.args[1] = arguments.actualValue;
+					}				
+				}		
+
+				local.result = arguments.specContext.then.assert(argumentCollection=local.args);
 				if(NOT isDefined('local.result'))
 				{
 					throw("Your test assertion must return either true for success or false for a failure");
@@ -416,6 +450,7 @@ component accessors="true"{
 		}
 	}
 
+
 	private function assertResponseValues(actualValue, expectedValue, type)
 	{
 		if(isClosure(arguments.expectedValue))
@@ -431,6 +466,10 @@ component accessors="true"{
 						throw("The parameter to the function expected a json string but did not receive one from the API call");
 					}
 					local.args.json = deserializeJson(arguments.actualValue);
+				}
+				else if (local.param.name IS "given")
+				{
+					local.args.given = variables.lastGiven;
 				}
 				else if(local.param.name IS "before")
 				{
