@@ -40,7 +40,7 @@ component {
 		local.relationships = [];
 		for(local.prop in local.properties)
 		{
-			if(structKeyExists(local.prop,"fieldtype") AND local.prop.fieldtype IS NOT "id")
+			if(structKeyExists(local.prop,"fieldtype") AND local.prop.fieldtype IS NOT "id" AND NOT structKeyExists(local.prop, "specskiptest"))
 			{
 				arrayAppend(local.relationships,local.prop);
 			}
