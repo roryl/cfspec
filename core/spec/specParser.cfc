@@ -268,6 +268,10 @@ component accessors="true" {
 
 				for(local.uri IN spec.tests)
 				{
+					//Set a default for the patch of a spec 
+					local.patch = {};
+
+
 					//These keywords are not actually URIs and so they can be skipped
 					if(local.uri IS "setup" OR local.uri IS "before" OR local.uri IS "after" OR local.uri IS "factory"){
 						continue;	
@@ -280,10 +284,30 @@ component accessors="true" {
 							continue;	
 						}
 
-						for(local.context IN spec.tests[local.uri][local.method])
-						{							
+						for(local.scenario IN spec.tests[local.uri][local.method])
+						{	
+
+							//Check if this context is importing another context. If it is, then we want to grab the other and import this
+							if(structKeyExists(spec.tests[local.uri][local.method][local.scenario],"import"))
+							{
+								//Override the patch value if it exists
+								if(structKeyExists(spec.tests[local.uri][local.method][local.scenario],"patch"))
+								{
+									local.patch = spec.tests[local.uri][local.method][local.scenario].patch;									
+								}
+
+
+								//Ovverride the spec that is being imported. By default it starts from the spec we are in and we only need to overwrite
+								//Those addresses which are different
+								for(local.key in spec.tests[local.uri][local.method][local.scenario].import)
+								{
+									local[local.key] = spec.tests[local.uri][local.method][local.scenario].import[local.key];
+								}
+
+							}
+
 							//These keywords are not actually scenarios and so they can be skipped
-							if(local.context IS "setup" OR local.context IS "before" OR local.context IS "after" OR local.context IS "factory"){
+							if(local.scenario IS "setup" OR local.scenario IS "before" OR local.scenario IS "after" OR local.scenario IS "factory"){
 								continue;	
 							}
 
@@ -309,27 +333,27 @@ component accessors="true" {
 							if(structKeyExists(spec.tests[local.uri][local.method],"setup"))
 							{
 								o('//Get the setup function for the test')
-								o('var methodTestSetup = variables.spec.tests.#name#["#context#"].setup')
+								o('var methodTestSetup = variables.spec.tests.#name#["#local.scenario#"].setup')
 								o('//Call the setup function for the test');
 								
 								o('methodTestSetup()')
 							}
 
 							//Setup at the context level
-							if(structKeyExists(spec.tests[local.uri][local.method][local.context],"setup"))
+							if(structKeyExists(spec.tests[local.uri][local.method][local.scenario],"setup"))
 							{
 								o('//Get the setup function for the test')
-								o('var contextTestSetup = variables.spec.tests.#name#["#context#"].setup')
+								o('var contextTestSetup = variables.spec.tests.#name#["#local.scenario#"].setup')
 								o('//Call the setup function for the test');
 								
 								o('contextTestSetup()')
 							}
 
-							local.clean = cleanURI(local.uri & "_" & local.context);
+							local.clean = cleanURI(local.uri & "_" & local.scenario);
 
 							o('public function #local.method#_#local.clean#(){');
 								tab("+1");
-								o('test = new cfspec.core.spec.httpTester(specPath="#variables.specFilePath#", method="#local.method#", resource="#local.uri#", scenario="#local.context#")');
+								o('test = new cfspec.core.spec.httpTester(specPath="#variables.specFilePath#", method="#local.method#", resource="#local.uri#", scenario="#local.scenario#")');
 								o('local.result = test.doHTTPCall();')
 								o('writeOutput(local.result.fileContent)');
 								// o('local.afterTests = test.getAfterTests();')

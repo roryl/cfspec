@@ -14,7 +14,7 @@ component accessors="true"{
 	property name="afterTests";
 
 
-	public function init(required string specPath, required string method, required string scenario, required string resource, struct patch={}){
+	public function init(required string specPath, required string method, required string scenario, required string resource, any patch={}){
 
 		//Load the spec path into this variables scope. It is neceessary that the spec be included here so that any function calls from within the spec are in the scope of this object
 		variables.specPath = arguments.specPath;
@@ -38,12 +38,35 @@ component accessors="true"{
 		writeLog(file="cfspec", text=arguments.text);
 	}
 
-	private function patchSpec(required struct patch){
-		for(local.key in arguments.patch)
+	private function patchSpec(required any patch){
+
+		//If the patch is a function, then we need to look at what data is being requested to be 
+		//patched and we will pass a reference to that into the function
+		if(isClosure(arguments.patch))
 		{
-			local.keyRef = "[""" & replace(key,".","""][""","all") & """]";			
-			evaluate('variables.spec["tests"]["#variables.resource#"]["#variables.method#"]["#variables.scenario#"]#local.keyRef# = arguments.patch[local.key]');
+			local.funcMeta = getMetaData(arguments.patch);
+			writeDump(local.funcMeta);
+			abort;
+			local.args = {}
+			for(local.param in local.funcMeta.parameters)
+			{
+				if (local.param.name IS "given")
+				{
+					variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"].given;
+				}							
+			}		
+
+			arguments.patch(argumentCollection=local.args);
 		}
+
+		if(isStruct(arguments.patch))
+		{
+			for(local.key in arguments.patch)
+			{
+				local.keyRef = "[""" & replace(key,".","""][""","all") & """]";			
+				evaluate('variables.spec["tests"]["#variables.resource#"]["#variables.method#"]["#variables.scenario#"]#local.keyRef# = arguments.patch[local.key]');
+			}
+		}		
 	}
 
 	public function runHTTPSpec(specPath, method, scenario, resource, patch={}){
