@@ -268,10 +268,7 @@ component accessors="true" {
 
 				for(local.uri IN spec.tests)
 				{
-					//Set a default for the patch of a spec 
-					local.patch = {};
-
-
+					
 					//These keywords are not actually URIs and so they can be skipped
 					if(local.uri IS "setup" OR local.uri IS "before" OR local.uri IS "after" OR local.uri IS "factory"){
 						continue;	
@@ -286,26 +283,6 @@ component accessors="true" {
 
 						for(local.scenario IN spec.tests[local.uri][local.method])
 						{	
-
-							//Check if this context is importing another context. If it is, then we want to grab the other and import this
-							if(structKeyExists(spec.tests[local.uri][local.method][local.scenario],"import"))
-							{
-								//Override the patch value if it exists
-								if(structKeyExists(spec.tests[local.uri][local.method][local.scenario],"patch"))
-								{
-									local.patch = spec.tests[local.uri][local.method][local.scenario].patch;									
-								}
-
-
-								//Ovverride the spec that is being imported. By default it starts from the spec we are in and we only need to overwrite
-								//Those addresses which are different
-								for(local.key in spec.tests[local.uri][local.method][local.scenario].import)
-								{
-									local[local.key] = spec.tests[local.uri][local.method][local.scenario].import[local.key];
-								}
-
-							}
-
 							//These keywords are not actually scenarios and so they can be skipped
 							if(local.scenario IS "setup" OR local.scenario IS "before" OR local.scenario IS "after" OR local.scenario IS "factory"){
 								continue;	

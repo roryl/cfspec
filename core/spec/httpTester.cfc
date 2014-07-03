@@ -24,12 +24,44 @@ component accessors="true"{
 		variables.method = arguments.method;		
 		variables.resource = arguments.resource;
 		variables.scenario = arguments.scenario;
+		
+		//Now we check if the spec we are using is actually an import of another spec. If it is, we're going to replace the values
+		//set above with the imported spec
+		if(structKeyExists(variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"],"import"))
+		{	
+			//Copy the original spec path so that we can compare it;
+			local.originalSpecPath = variables.specPath;
+			
+			//After having looped through and replaced all references, we need to do a patch if any
+			if(structKeyExists(variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"],"patch"))
+			{
+				local.patchReference = variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"].patch;				
+			}
 
+			//Override any of the keys for the import with what were set in this object
+			for(local.key in variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"].import)
+			{
+				variables[local.key] = variables.spec.tests[variables.resource][variables.method][variables.scenario].import[local.key];
+			}			
+
+			//If the import defines a spec path, then we need to reload the spec file path which will be overridden
+			if(variables.specPath IS NOT local.originalSpecPath)
+			{
+				include template="#variables.specPath#";
+			}
+
+			//After having looped through and replaced all references, we need to do a patch if any
+			if(structKeyExists(local,"patchReference"))
+			{
+				patchSpec(local.patchReference);
+			}
+		}
+
+		//Patch a spec normally if it is passed into the constructor
 		if(structKeyExists(arguments,"patch") AND NOT structIsEmpty(arguments.patch))
 		{
 			patchSpec(arguments.patch);
 		}
-
 
 		return this;
 	}
@@ -45,14 +77,12 @@ component accessors="true"{
 		if(isClosure(arguments.patch))
 		{
 			local.funcMeta = getMetaData(arguments.patch);
-			writeDump(local.funcMeta);
-			abort;
 			local.args = {}
 			for(local.param in local.funcMeta.parameters)
 			{
 				if (local.param.name IS "given")
 				{
-					variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"].given;
+					local.args.given = variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"].given;
 				}							
 			}		
 
@@ -271,42 +301,60 @@ component accessors="true"{
 	
 
 	public function doAsserts(required specContext, required response){
+		
+		//Setup a local function that will be called before. We split this out because the assert specification
+		//can either be a structure of message or just a general function
+		local.doAssert = function(assert){
+			local.funcMeta = getMetaData(arguments.assert);
+			local.args = {}
+			for(local.param in local.funcMeta.parameters)
+			{
+				if(local.param.name IS "response") 
+				{ 	
+					local.args.response = arguments.response;
+				}
+				else if (local.param.name IS "given")
+				{
+					local.args.given = variables.lastGiven;
+				}
+				else if(local.param.name IS "before")
+				{
+					local.args.before = variables.lastBefore;
+				}
+				else {
+					local.args[1] = arguments.actualValue;
+				}				
+			}		
+
+			local.result = arguments.assert(argumentCollection=local.args);
+			if(NOT isDefined('local.result'))
+			{
+				throw("Your test assertion must return either true for success or false for a failure");
+			}
+
+			if(local.result IS false)
+			{
+				throw(message="The assertion failed");
+			}
+		}
+
+		//Run the asserts 
 		if(structKeyExists(arguments.specContext,"then"))
 		{
 			if(structKeyExists(arguments.specContext.then,"assert"))
 			{	
-
-				local.funcMeta = getMetaData(arguments.specContext.then.assert);
-				local.args = {}
-				for(local.param in local.funcMeta.parameters)
+				if(isStruct(arguments.specContext.then.assert))
 				{
-					if(local.param.name IS "response") 
-					{ 	
-						local.args.response = arguments.response;
-					}
-					else if (local.param.name IS "given")
+					for(local.message IN arguments.specContext.then.assert)
 					{
-						local.args.given = variables.lastGiven;
+						local.doAssert(arguments.specContext.then.assert["#local.message#"]);
 					}
-					else if(local.param.name IS "before")
-					{
-						local.args.before = variables.lastBefore;
-					}
-					else {
-						local.args[1] = arguments.actualValue;
-					}				
-				}		
-
-				local.result = arguments.specContext.then.assert(argumentCollection=local.args);
-				if(NOT isDefined('local.result'))
-				{
-					throw("Your test assertion must return either true for success or false for a failure");
 				}
-
-				if(local.result IS false)
+				else
 				{
-					throw(message="The assertion failed");
+					local.doAssert(arguments.specContext.then.assert);
 				}
+				
 			}
 		}
 	}
