@@ -24,14 +24,22 @@ component accessors="true"{
 		variables.method = arguments.method;		
 		variables.resource = arguments.resource;
 		variables.scenario = arguments.scenario;
-		
+
+		//The spec variables can be overwritten by an import, but the originals need to be use in the URI in the http call, so we need to 
+		//keep a reference to them
+		variables.originalUrl = variables.spec.url;		
+		variables.originalResource = variables.resource;
+
 		//Now we check if the spec we are using is actually an import of another spec. If it is, we're going to replace the values
 		//set above with the imported spec
 		if(structKeyExists(variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"],"import"))
 		{	
-			//Copy the original spec path so that we can compare it;
-			local.originalSpecPath = variables.specPath;
-			
+			//Copy the original spec path so that we can compare it;	
+			variables.originalSpecPath = variables.specPath;
+			variables.originalResource = variables.resource;
+			variables.originalScenario = variables.scenario;
+			variables.originalMethod = variables.method;
+
 			//After having looped through and replaced all references, we need to do a patch if any
 			if(structKeyExists(variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"],"patch"))
 			{
@@ -39,13 +47,13 @@ component accessors="true"{
 			}
 
 			//Override any of the keys for the import with what were set in this object
-			for(local.key in variables.spec.tests["#variables.resource#"]["#variables.method#"]["#variables.scenario#"].import)
+			for(local.key in variables.spec.tests["#variables.originalResource#"]["#variables.originalMethod#"]["#variables.originalScenario#"].import)
 			{
-				variables[local.key] = variables.spec.tests[variables.resource][variables.method][variables.scenario].import[local.key];
+				variables[local.key] = variables.spec.tests["#variables.originalResource#"]["#variables.originalMethod#"]["#variables.originalScenario#"].import[local.key];				
 			}			
 
 			//If the import defines a spec path, then we need to reload the spec file path which will be overridden
-			if(variables.specPath IS NOT local.originalSpecPath)
+			if(variables.specPath IS NOT variables.originalSpecPath)
 			{
 				include template="#variables.specPath#";
 			}
@@ -166,7 +174,8 @@ component accessors="true"{
 		
 		doLog("Start doHTTPCall");
 
-		local.URI = variables.spec.url & variables.resource;
+		//We use the originalUrl and the originalResource because we want to ensure that we are using the endpoint from the parent spec
+		local.URI = variables.originalUrl & variables.originalResource;
 		
 		local.context = variables.spec.tests[variables.resource][variables.method][variables.scenario];
 
@@ -191,6 +200,7 @@ component accessors="true"{
 
 			if(structKeyExists(local.given,"path"))
 			{
+
 				local.path = getOrCallValue(local.given.path);
 				variables.lastGiven.path = local.path;
 				//For each of the path items, replace the variable requested with the value
@@ -411,7 +421,7 @@ component accessors="true"{
 					for(param in afterMeta.parameters)
 					{
 						if(param.name IS "response" AND isDefined('arguments.response')) { args.response = arguments.response }
-						
+						if(param.name IS "given" AND isDefined('variables.lastGiven')) { args.given = variables.lastGiven }						
 					}
 
 					local.afterCheck.after(argumentCollection=args);
