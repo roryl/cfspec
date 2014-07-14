@@ -13,35 +13,13 @@ component accessors="true" {
 	property name="specFilePath";
 	property name="timeForDirectory";
 	property name="specFileList";
+	property name="specObjects";
 
 	public function init(){
 		variables.lastTab = 0;
 		variables.debugging = true;
+		variables.specObjects = structNew("linked");
 		return this;
-	}
-
-	public function parseSpec(required filePath, outputPath)
-	{	
-		writeLog(file="cfspec",text="Start parseSpec");
-		var specFileName = listGetAt(arguments.filePath,listLen(arguments.filePath,"/"),"/");
-		var componentUnderTestDirectoryPath = replace(arguments.filePath,specFileName,"");
-		var componentUnderTestFileName = replace(specFileName,".spec","");
-				
-		var finalCompileDirectory = arguments.outputPath & componentUnderTestDirectoryPath;
-		
-		//Create the directory and all directories if they do not exist
-		if(NOT directoryExists(finalCompileDirectory))
-		{
-			directoryCreate(finalCompileDirectory,true);	
-		}
-		
-		var finalCompilePath = finalCompileDirectory & "/#componentUnderTestFileName#Tests.cfc";
-		
-		variables.specFilePath=arguments.filePath;
-		var spec = "";
-		include template="#variables.specFilePath#";
-		writeLog(file="cfspec",text="End parseSpec");
-		return _parseSpec(spec,finalCompilePath);
 	}
 
 	public function parseAllSpecs(required specDirectory, required outputPath, ignore=[])
@@ -72,6 +50,30 @@ component accessors="true" {
 		writeLog(file="cfspec",text="End parseAllSpecs");
 		return this;
 	}
+
+	public function parseSpec(required filePath, outputPath)
+	{	
+		writeLog(file="cfspec",text="Start parseSpec");
+		var specFileName = listGetAt(arguments.filePath,listLen(arguments.filePath,"/"),"/");
+		var componentUnderTestDirectoryPath = replace(arguments.filePath,specFileName,"");
+		var componentUnderTestFileName = replace(specFileName,".spec","");
+				
+		var finalCompileDirectory = arguments.outputPath & componentUnderTestDirectoryPath;
+		
+		//Create the directory and all directories if they do not exist
+		if(NOT directoryExists(finalCompileDirectory))
+		{
+			directoryCreate(finalCompileDirectory,true);	
+		}
+		
+		var finalCompilePath = finalCompileDirectory & "/#componentUnderTestFileName#Tests.cfc";
+		
+		variables.specFilePath=arguments.filePath;
+		var spec = "";
+		include template="#variables.specFilePath#";
+		writeLog(file="cfspec",text="End parseSpec");
+		return _parseSpec(spec,finalCompilePath);
+	}	
 
 	private function getSpecFiles(required mapping,ignore=[],required filter){
 		writeLog(file="cfspec",text="Start getSpecFiles");
@@ -251,17 +253,17 @@ component accessors="true" {
 
 				o('request.afterTestsCalls = []');				
 
-				o('public function afterTests()')
-				o('{')
-				tab("+1")
-						o('for(local.afterTest in request.afterTestsCalls)')
-						o('{')
-						tab("+1")
-								o('local.afterTest.func(local.afterTest.response)');
-						tab("-1");
-						o('}')
-				tab("-1")
-				o('}')
+				// o('public function afterTests()')
+				// o('{')
+				// tab("+1")
+				// 		o('for(local.afterTest in request.afterTestsCalls)')
+				// 		o('{')
+				// 		tab("+1")
+				// 				o('local.afterTest.func(local.afterTest.response)');
+				// 		tab("-1");
+				// 		o('}')
+				// tab("-1")
+				// o('}')
 				nl();
 
 				buildBeforeTests(local.spec);
@@ -347,9 +349,6 @@ component accessors="true" {
 						}
 					}
 				}
-
-
-
 
 				tab(-1);
 			nl();

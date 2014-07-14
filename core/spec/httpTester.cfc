@@ -14,7 +14,7 @@ component accessors="true"{
 	property name="afterTests";
 
 
-	public function init(required string specPath, required string method, required string scenario, required string resource, any patch={}){
+	public function init(required string specPath, required string method, required string scenario, required string resource, any patch={}, hasParentTest=false){
 
 		//Load the spec path into this variables scope. It is neceessary that the spec be included here so that any function calls from within the spec are in the scope of this object
 		variables.specPath = arguments.specPath;
@@ -29,6 +29,9 @@ component accessors="true"{
 		//keep a reference to them
 		variables.originalUrl = variables.spec.url;		
 		variables.originalResource = variables.resource;
+
+		variables.hasParentTest = arguments.hasParentTest;
+		variables.afterTestsCalls = [];
 
 		//Now we check if the spec we are using is actually an import of another spec. If it is, we're going to replace the values
 		//set above with the imported spec
@@ -107,8 +110,8 @@ component accessors="true"{
 		}		
 	}
 
-	public function runHTTPSpec(specPath, method, scenario, resource, patch={}){
-		
+	public function runHTTPSpec(specPath, method, scenario, resource, patch={}){		
+
 		//Set default values to be the same spec that was already defined here
 		local.args = {
 			specPath:variables.specPath,
@@ -124,10 +127,21 @@ component accessors="true"{
 			{
 				local.args[key] = arguments[key];
 			}			
-		}	
+		}
 
+		local.args.hasParentTest = true;
+		
 		local.httpTester = new httpTester(argumentCollection=local.args);
-		local.result = local.httpTester.doHTTPCall();		
+
+		local.result = local.httpTester.doHTTPCall();
+
+		local.afterTestsCalls = local.httpTester.getAfterTestsCalls();
+
+		//copy the after tests into the after tests of this object
+		for(local.afterTest in local.afterTestsCalls)
+		{
+			variables.afterTestsCalls.append(local.afterTest);	
+		}		
 
 		return local.result;
 	}
@@ -303,12 +317,20 @@ component accessors="true"{
 
 		setAfterTests(local.specLevels, local.cfhttp);
 
+		//If this is the parent test (the root test) then we are going to call all of the afterTests defined 
+		//and passed via each of the specs
+		if(variables.hasParentTest IS false)
+		{
+			for(local.afterTest in variables.afterTestsCalls) //257
+			{ 				
+				local.afterTest.func(argumentCollection=local.afterTest.args) //260		
+			} //262	
+		}
+
 		doLog("End doHTTPCall");
 		return local.cfhttp;
 
-	}
-
-	
+	}	
 
 	public function doAsserts(required specContext, required response){
 		
@@ -439,7 +461,7 @@ component accessors="true"{
 	}
 
 	/**
-	* doAfterTests regesters any afterTests to be called at the very end of all test runs
+	* setAfterTests regesters any afterTests to be called at the very end of a test heirarchy
 	*/
 	public function setAfterTests(required specLevels, response)
 	{
@@ -450,25 +472,28 @@ component accessors="true"{
 				//If the after is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
 				if(isClosure(local.afterCheck.afterTests))
 				{
-					// afterMeta = getMetaData(local.afterCheck.afterTests);
-					// args = {}
-					// for(param in afterMeta.parameters)
-					// {
-					// 	if(param.name IS "response" AND isDefined('arguments.response')) { args.response = arguments.response }						
-					// }
-
-					request.afterTestsCalls.append({func=local.afterCheck.afterTests, response = arguments.response});			
-				}
-				else if(isStruct(local.afterCheck.after))
-				{
-					if(structKeyExists(local.afterCheck.after,"unit") AND arguments.depth IS 1)
+					afterMeta = getMetaData(local.afterCheck.afterTests);
+					local.args = {}
+					for(param in afterMeta.parameters)
 					{
-						local.afterCheck.after.unit();
+						if(param.name IS "response" AND isDefined('arguments.response')) { args.response = arguments.response }
+						if(param.name IS "given" AND isDefined('variables.lastGiven')) { args.given = variables.lastGiven }					
 					}
-				}
+
+					variables.afterTestsCalls.append({func=local.afterCheck.afterTests, args = local.args});			
+				}				
 			}
 
 		}
+	}
+
+	/**
+	* Returns the after tests set in this object to the calling parent. this will be used when nesting HTTP specs via 
+	* the runHTTPspec function
+	*/
+	public function getAfterTestsCalls()
+	{
+		return variables.afterTestsCalls;
 	}
 
 	public function doAssertReturns(required string httpFileContent, required responseType)
@@ -577,10 +602,22 @@ component accessors="true"{
 		}		
 	}
 
-	private function assert(value=true,message=""){
+	private function assert(value=true,message="",dumpvar=false){
+
+		if(arguments.dumpvar)
+		{
+			writeDump(arguments.value);
+			
+		}
 
 		if(arguments.value IS false)
-		{			
+		{		
+			if(arguments.dumpvar)
+		{
+			writeDump(arguments.value);
+			
+			abort;
+		}	
 			local.call = callStackGet()[2]
 		
 			local.specFile = fileOpen(local.call.template);
