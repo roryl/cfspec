@@ -12,6 +12,8 @@ component accessors="true"{
 	property name="Host";
 	property name="Resource";
 	property name="afterTests";
+	property name="lastGiven";
+	property name="httpResponse";
 
 
 	public function init(required string specPath, required string method, required string scenario, required string resource, any patch={}, hasParentTest=false){
@@ -143,7 +145,7 @@ component accessors="true"{
 			variables.afterTestsCalls.append(local.afterTest);	
 		}		
 
-		return local.result;
+		return local.httpTester;
 	}
 
 	public function getCookiesAsStruct(required cookiesData)
@@ -305,6 +307,7 @@ component accessors="true"{
 		}
 		doLog("End actual HTTPCall");
 		request.httpTesterResponse = local.cfhttp;
+		variables.httpResponse = local.cfhttp;
 
 		doAssertReturns(local.cfhttp.fileContent, local.context.then.returns);
 
