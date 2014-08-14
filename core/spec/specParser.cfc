@@ -272,9 +272,12 @@ component accessors="true" {
 				{
 					
 					//These keywords are not actually URIs and so they can be skipped
-					if(local.uri IS "setup" OR local.uri IS "before" OR local.uri IS "after" OR local.uri IS "factory"){
+					if(local.uri IS "setup" OR local.uri IS "before" OR local.uri IS "after" OR local.uri IS "factory" OR local.uri IS "afterRoot"){
 						continue;	
 					}
+
+					try {
+
 
 					for(local.method IN spec.tests[local.uri])
 					{
@@ -347,6 +350,11 @@ component accessors="true" {
 							o('}')
 							nl();
 						}
+					}
+					}
+					catch(any e){
+						writeDump(local);
+						abort;
 					}
 				}
 
