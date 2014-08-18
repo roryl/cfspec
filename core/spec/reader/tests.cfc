@@ -19,14 +19,38 @@ component accessors="true" {
 	}
 
 	public function getTestByName(required string name)
-	{	
-		for(local.test in variables.tests)
+	{			
+		if(structKeyExists(variables.specObject.getSpecSchema(),"class"))
 		{
-			if(local.test IS arguments.name)
+			for(local.test in variables.tests)
 			{
-				local.testStruct = structNew();
-				local.testStruct.insert(local.test,variables.tests[local.test]);
-				return new test(variables.specObject,local.testStruct);
+				if(local.test IS arguments.name)
+				{
+					local.testStruct = structNew();
+					local.testStruct.insert(local.test,variables.tests[local.test]);
+					return new test(variables.specObject,local.testStruct);
+				}
+			}
+		}
+
+		if(structKeyExists(variables.specObject.getSpecSchema(),"url"))
+		{
+			local.methodName = trim(listFirst(arguments.name,":"));
+			local.uri = trim(listLast(arguments.name,":"));
+			for(local.resource in variables.tests)
+			{
+				if(local.resource IS local.uri)
+				{
+					for(local.method in variables.tests[local.resource])
+					{
+						if(local.method IS local.methodName)
+						{
+							local.testStruct = structNew();				
+							local.testStruct.insert("#local.method#: #local.resource#",variables.tests[local.resource][local.method]);
+							return new test(variables.specObject,local.testStruct);
+						}
+					}
+				}
 			}
 		}
 	}

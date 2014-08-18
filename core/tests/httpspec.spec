@@ -9,7 +9,7 @@
 							request.doSomething = true;							
 						},
 						given:{														
-							url:"",							
+							url:{},
 							cookies:[
 								{name="test", value="value1"}
 							]
