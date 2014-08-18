@@ -52,14 +52,14 @@ component accessors="true" {
 			local.tests = [];
 			for(local.resource in variables.tests)
 			{
-				if(listContains("before,setup,after,afterTests",local.resource)){
+				if(listContains("before,setup,after,afterTests,afterRoot",local.resource)){	
 					continue;
 				}
 				
 
 				for(local.method in variables.tests[local.resource])
 				{
-					if(listContains("before,setup,after,afterTests",local.resource)){
+					if(listContains("before,setup,after,afterTests,afterRoot",local.resource)){
 						continue;
 					}
 					

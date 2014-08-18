@@ -327,7 +327,13 @@ component accessors="true"{
 			for(local.afterTest in variables.afterTestsCalls) //257
 			{ 				
 				local.afterTest.func(argumentCollection=local.afterTest.args) //260		
-			} //262	
+			} //262
+
+			if(structKeyExists(variables.spec.tests,"afterRoot"))
+			{
+				doLog("Call After Root");
+				variables.spec.tests.afterRoot();
+			}
 		}
 
 		doLog("End doHTTPCall");
