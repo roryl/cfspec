@@ -22,10 +22,10 @@ component accessors="true" {
 		return this;
 	}
 
-	public function parseAllSpecs(required specDirectory, required outputPath, ignore=[])
+	public function parseAllSpecs(required specDirectory, required outputPath, ignore=[], reloadFiles=false)
 	{
 		writeLog(file="cfspec",text="Start parseAllSpecs");
-		if(structKeyExists(url,"reloadFiles") OR NOT structKeyExists(application,"specFiles"))
+		if(arguments.reloadFiles OR NOT structKeyExists(application,"specFiles"))
 		{
 			application.specFiles = getSpecFiles(arguments.specDirectory,arguments.ignore,"%.spec%");
 			variables.specFileList = application.specFiles;
@@ -276,6 +276,9 @@ component accessors="true" {
 						continue;	
 					}
 
+					try {
+
+
 					for(local.method IN spec.tests[local.uri])
 					{
 						//These keywords are not actually methods and so they can be skipped
@@ -347,6 +350,11 @@ component accessors="true" {
 							o('}')
 							nl();
 						}
+					}
+					}
+					catch(any e){
+						writeDump(local);
+						abort;
 					}
 				}
 

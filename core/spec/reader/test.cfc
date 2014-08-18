@@ -23,11 +23,47 @@ component accessors="true"{
 
 	public function getUnitTestNames(){
 		local.names = [];
-		for(local.scenario IN variables.scenarios)
+
+		if(structKeyExists(variables.spec.getSpecSchema(),"class"))
 		{
-			local.name = "#variables.testName#_#replace(local.scenario," ","_","all")#";
-			local.names.append(local.name);
+			for(local.scenario IN variables.scenarios)
+			{
+				local.name = "#variables.testName#_#replace(local.scenario," ","_","all")#";
+				local.names.append(local.name);
+			}
 		}
+
+		if(structKeyExists(variables.spec.getSpecSchema(),"url"))
+		{
+			for(local.scenario IN variables.scenarios)
+			{
+				local.method = listFirst(variables.testName,":");
+				local.uri = trim(listLast(variables.testName,":"));
+				local.clean = cleanURI(local.uri & "_" & local.scenario);				
+				local.name = "#local.method#_#local.clean#";
+				local.names.append(local.name);
+			}
+		}
+
+		
 		return local.names;
+	}
+
+	public function getTestName(){
+		return variables.testName;
+	}
+
+	private function cleanURI(required string URI)
+	{
+		local.output = arguments.uri;
+		local.output = replaceNoCase(local.output,"?","","all");
+		local.output = replaceNoCase(local.output,"/","_","all");
+		local.output = replaceNoCase(local.output,"=","_","all");
+		local.output = replaceNoCase(local.output,".","_","all");
+		local.output = replaceNoCase(local.output,"&","_","all");	
+		local.output = replaceNoCase(local.output,"{","_","all");	
+		local.output = replaceNoCase(local.output,"}","_","all");
+		local.output = replaceNoCase(local.output," ","_","all");
+		return local.output;
 	}
 }

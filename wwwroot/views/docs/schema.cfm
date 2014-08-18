@@ -53,7 +53,12 @@ public string function formatJSON(str) {
 }
 </cfscript>
 
-<cfinclude template="/cfspec/core/spec/specSchema.cfm">
+<cfif structKeyExists(url,"httptester")>
+	<cfinclude template="/cfspec/core/spec/httpTesterSchema.cfm">	
+<cfelse>
+	<cfinclude template="/cfspec/core/spec/specSchema.cfm">	
+</cfif>
+
 
 <style>
  .panel {

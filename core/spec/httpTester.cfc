@@ -15,7 +15,6 @@ component accessors="true"{
 	property name="lastGiven";
 	property name="httpResponse";
 
-
 	public function init(required string specPath, required string method, required string scenario, required string resource, any patch={}, hasParentTest=false){
 
 		//Load the spec path into this variables scope. It is neceessary that the spec be included here so that any function calls from within the spec are in the scope of this object
@@ -342,16 +341,16 @@ component accessors="true"{
 	}	
 
 	public function doAsserts(required specContext, required response){
-		
+
 		//Setup a local function that will be called before. We split this out because the assert specification
 		//can either be a structure of message or just a general function
-		local.doAssert = function(assert){
+		local.doAssert = function(assert, response){
 			local.funcMeta = getMetaData(arguments.assert);
 			local.args = {}
 			for(local.param in local.funcMeta.parameters)
 			{
 				if(local.param.name IS "response") 
-				{ 	
+				{ 						
 					local.args.response = arguments.response;
 				}
 				else if (local.param.name IS "given")
@@ -393,7 +392,7 @@ component accessors="true"{
 				}
 				else
 				{
-					local.doAssert(arguments.specContext.then.assert);
+					local.doAssert(arguments.specContext.then.assert, arguments.response);
 				}
 				
 			}
