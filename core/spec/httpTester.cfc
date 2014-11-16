@@ -241,9 +241,9 @@ component accessors="true"{
 				}
 
 				if(structKeyExists(local.context.given,"url"))
-				{
-
+				{					
 					local.urlFields = getOrCallValue(local.context.given.url);
+					variables.lastGiven.url = local.urlFields;
 
 					for(local.field IN local.urlFields)
 					{
