@@ -184,6 +184,10 @@ component accessors="true"{
 		abort;
 	}
 
+	public function getHTTPResponseAsJson(){
+		return deserializeJson(variables.httpResponse.fileContent);	
+	}
+
 	public function doHTTPCall()
 	{
 		
