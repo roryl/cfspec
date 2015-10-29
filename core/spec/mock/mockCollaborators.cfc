@@ -54,7 +54,7 @@ component output="false" displayname=""  {
 		if(arguments.collaborator IS "this"){
 			local.collaboratorReference = this;
 		} else {			
-			local.collaboratorReference = variables[collaborator]
+			local.collaboratorReference = variables;
 		}			
 		/*
 		There are currently three types of overrides for collaborators:
@@ -106,14 +106,16 @@ component output="false" displayname=""  {
 		else if(isClosure(local.mockValue))
 		{
 
-			local.collaboratorReference[arguments.functionName] = local.mockValue;
+			local.collaboratorReference[arguments.functionName] = local.mockValue;			
 
 			//Copy the mockProxy's utility functions into the scope of the component so that any calls within this function can access them
 			local.utilities = new mockUtilities();
 			local.collaboratorReference.executeSQL = local.utilities.executeSQL;
-			local.collaboratorReference.genericQuery = local.utilities.genericQuery;			
-			local.collaboratorReference.setFunctionsLocal = this.setFunctionsLocal;
-			local.collaboratorReference.setFunctionsLocal();
+			local.collaboratorReference.genericQuery = local.utilities.genericQuery;
+			if(collaborator IS "this"){
+				local.collaboratorReference.setFunctionsLocal = this.setFunctionsLocal;
+				local.collaboratorReference.setFunctionsLocal();				
+			}	
 
 		}
 

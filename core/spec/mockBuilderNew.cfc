@@ -33,7 +33,7 @@ component output="false" displayname=""  {
 		// 	local.object = local.object.getObject();
 		// }
 
-		local.proxy = createObject("mock.mockProxy").create(object=local.object,parentName=arguments.parentName,mockDepth=local.mockDepth,contextInfo=local.contextInfo);
+		//local.proxy = createObject("mock.mockProxy").create(object=local.object,parentName=arguments.parentName,mockDepth=local.mockDepth,contextInfo=local.contextInfo);
 		//writeDump(local.result);
 
 		//Ensure that the function call that we are making on the collaborator is a public function

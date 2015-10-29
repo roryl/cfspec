@@ -23,7 +23,7 @@ component accessors="true" {
 	}
 
 	public function parseAllSpecs(required specDirectory, required outputPath, ignore=[], reloadFiles=false)
-	{
+	{	
 		writeLog(file="cfspec",text="Start parseAllSpecs");
 		if(arguments.reloadFiles OR NOT structKeyExists(application,"specFiles"))
 		{
@@ -169,7 +169,7 @@ component accessors="true" {
 				2. Injecting values, objects and methods into components using closures - The primary method of changing internal state of a component under test or of its 
 				   dependencies is to define a closure on the public interface of the component and then call that closure, passing in the values of the outside scope
 				   where the function body of the closure will then operate on the internal scope of the object. All closures opperate within the scope of the component 
-				   that they are assigned to. 
+				   that they are assigned to. [NOTE 9/20/2015 - Closures do not work for this, but injected methods do]
 
 				3. Including the specification document within the generated MXunit test case, the component under test, or any dependency - 
 				   The specification format allows defining functions in line in numerous places. In order for calls of these functions to work, the functions
@@ -410,17 +410,6 @@ component accessors="true" {
 						continue;	
 					}
 					
-					// //IF there was a setup function specified, it was used above. But now we need to delete it as we don't need it for the tests
-					// if(structKeyExists(spec.tests[name],"setup"))
-					// {
-					// 	//Duplicate the test so that we can delete values without affecting the original
-					// 	var func = duplicate(spec.tests[name]);
-					// 	//Delete the seutp function which is only going to leave the contexts under test
-					// 	structDelete(func,"setup");
-					// }	
-					// else{
-					// 	var func = spec.tests[name];
-					// }
 					var func = spec.tests[name];
 
 					for(var context in func)//For each of the contexts for this function that we are testing

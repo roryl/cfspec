@@ -16,11 +16,12 @@ component output="false" displayname=""  accessors="true" extends="" {
 	property name="objectName";
 	property name="contextInfo";
 	property name="mockContexts";
+	property name="lastBefore"; 	
 
 	public function create(required component object, 
 						   required string parentName, 
 						   required numeric mockDepth, 
-						   required contextInfo){
+						   required contextInfo){		
 		variables.object = arguments.object;
 		variables.parentName = arguments.parentName;
 		variables.depth = arguments.mockDepth;
@@ -179,7 +180,25 @@ component output="false" displayname=""  accessors="true" extends="" {
 		{
 			if(isClosure(arguments.specContext.given))
 			{
-				request.given = arguments.specContext.given(variables.object);		
+
+				local.funcMeta = getMetaData(arguments.specContext.given);
+				local.args = {}
+				for(local.param in local.funcMeta.parameters)
+				{
+					if(local.param.name IS "componentUnderTest") 
+					{ 						
+						local.args.response = variables.object;
+					}					
+					else if(local.param.name IS "before")
+					{
+						local.args.before = variables.lastBefore;
+					}
+					else {
+						local.args[1] = variables.object;
+					}				
+				}
+
+				request.given = arguments.specContext.given(argumentCollection=local.args);		
 			}
 			else
 			{
@@ -189,9 +208,15 @@ component output="false" displayname=""  accessors="true" extends="" {
 		}
 		else
 		{
-
 			local.given = arguments.missingMethodArguments;
 		}
+
+		for(var givenTest in local.given){
+			if(isClosure(local.given[givenTest])){
+				local.given[givenTest] = local.given[givenTest]();
+			}
+		}
+
 		return local.given;
 	}
 
@@ -207,19 +232,19 @@ component output="false" displayname=""  accessors="true" extends="" {
 		*/
 		for(local.beforeCheck in arguments.specLevels)
 		{
-			//Call any after functions for this collaborator specification
+			//Call any before functions for this collaborator specification
 			if(structKeyExists(local.beforeCheck,"before"))
 			{
 				//If the before is a function, then call it every time. Else we will check if the user has described calling it for only unit tests or collaborator tests
 				if(isClosure(local.beforeCheck.before))
 				{
-					local.beforeCheck.before(variables.object);	
+					variables.lastBefore = local.beforeCheck.before(variables.object);	
 				}
 				else if(isStruct(local.beforeCheck.before))
 				{
 					if(structKeyExists(local.beforeCheck.before,"unit") AND variables.depth IS 1)
 					{
-						local.beforeCheck.before.unit(variables.object);
+						variables.lastBefore = local.beforeCheck.before.unit(variables.object);
 					}
 				}
 				
@@ -230,47 +255,80 @@ component output="false" displayname=""  accessors="true" extends="" {
 	/**
 	* doAsserts checks and runs the assert clauses from the specification. 
 	*/
-	private function doAsserts(required specContext, result, required objectUnderTest)
+	private function doAsserts(required specContext, result, required objectUnderTest, required specLevels)
 	{
-		//Call any assert statements for this specification
-		if(structKeyExists(arguments.specContext,"then") AND structKeyExists(arguments.specContext.then,"assert"))
-		{	
-			local.asserts = arguments.specContext.then.assert;
-			if(isClosure(local.asserts))
-			{
-				local.result = local.asserts(((isNull(arguments.result))?"NULL":arguments.result),arguments.objectUnderTest);
 
-				if(NOT isDefined('local.result'))
-				{
-					throw("Your test assertion must return either true for success or false for a failure");
-				}
+		for(local.assertCheck IN arguments.specLevels){
 
-				if(local.result IS false)
+			//Call any assert statements for this specification
+			if(structKeyExists(arguments.specContext,"then") AND structKeyExists(arguments.specContext.then,"assert"))
+			{	
+				
+				if(structKeyExists(local.assertCheck,"assert") OR structKeyExists(local.assertCheck,"then"))
 				{
-					throw(message="The assertion failed");
-				}
-			}
-			else if(isArray(local.asserts))
-			{
-				for(assert in asserts)
-				{					
-					if(isStruct(assert))
+
+					if(structKeyExists(local.assertCheck,"assert")){
+						local.asserts = local.assertCheck.assert;
+					} else {
+						local.asserts = arguments.specContext.then.assert;
+					}
+
+					if(isClosure(local.asserts))
 					{
-						if(isClosure(assert.value))
+						local.result = local.asserts(((isNull(arguments.result))?"NULL":arguments.result),arguments.objectUnderTest);
+
+						if(NOT isDefined('local.result'))
 						{
-							local.result = assert.value(arguments.result,arguments.objectUnderTest);
+							throw("Your test assertion must return either true for success or false for a failure");
+						}
 
-							if(NOT isDefined('local.result'))
+						if(local.result IS false)
+						{
+							throw(message="The assertion failed");
+						}
+					}
+					else if(isArray(local.asserts))
+					{
+						for(assert in asserts)
+						{					
+							if(isStruct(assert))
 							{
-								throw("Your test assertion must return either true for success or false for a failure");
-							}
+								if(isClosure(assert.value))
+								{
+									local.result = assert.value(arguments.result,arguments.objectUnderTest);
 
-							if(local.result IS false)
-							{
-								throw(message="#assert.message#");
+									if(NOT isDefined('local.result'))
+									{
+										throw("Your test assertion must return either true for success or false for a failure");
+									}
+
+									if(local.result IS false)
+									{
+										throw(message="#assert.message#");
+									}
+								}	
+							}									
+						}
+					}
+					else if (isStruct(local.asserts)){
+
+						//The asserts are messages with functions
+						for(var message IN local.asserts){
+							if(isClosure(asserts[message])){
+								local.result = asserts[message](arguments.result, arguments.objectUnderTest);
+
+								if(NOT isDefined('local.result'))
+								{
+									throw("Your test assertion must return either true for success or false for a failure");
+								}
+
+								if(local.result IS false)
+								{
+									throw(message="Assert Failed: #message#");
+								}
 							}
-						}	
-					}									
+						}
+					}
 				}
 			}
 		}
@@ -402,18 +460,17 @@ component output="false" displayname=""  accessors="true" extends="" {
 			//Obtain the arguments to be passed into the function
 			local.given = doGiven(local.specContext,
 								  variables.depth,
-								  arguments.missingMethodArguments);
+								  arguments.missingMethodArguments);			
 			//writeDump("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");
 			// writeDump(variables.object.onStartTag(variables,{test="test"}));
 			// abort;
 			if(structIsEmpty(local.given))
 			{
-				
 				//Pass the arguments into the method being called under test			
 				local.value = evaluate("variables.object.#arguments.missingMethodName#()");
 			}
 			else
-			{
+			{				
 				//Pass the arguments into the method being called under test			
 				local.value = evaluate("variables.object.#arguments.missingMethodName#(argumentCollection=local.given)");
 			}
@@ -439,7 +496,8 @@ component output="false" displayname=""  accessors="true" extends="" {
 
 			local.doAssertsArgs = {
 				specContext:local.specContext,
-				objectUnderTest:variables.object,								
+				objectUnderTest:variables.object,
+				specLevels:local.specLevels								
 			}
 
 			if(NOT isNull(local.value))

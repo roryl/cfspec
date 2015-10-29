@@ -161,7 +161,7 @@ public string function formatJSON(str) {
 			        <cfelse>
 			        	<cfset local.parentNode = local.entryNode>
 			        </cfif>
-			        
+			       
 			        <div style="float:right;">
 			        <a href="/#queryString.setValue("entryNode",local.parentNode).get()#"><span class="glyphicon glyphicon-circle-arrow-left"></span></a> 
 			        <a href="/#queryString.setValue("entryNode",local.entryNode).get()#">Goto Node</a>

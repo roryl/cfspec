@@ -28,6 +28,13 @@ component accessors="true"{
 		{
 			for(local.scenario IN variables.scenarios)
 			{
+				if(local.scenario IS "before" OR
+				   local.scenario IS "after" OR
+				   local.scenario IS "setup" OR
+				   local.scenario IS "factory"){
+				   continue;	
+				}
+				
 				local.name = "#variables.testName#_#replace(local.scenario," ","_","all")#";
 				local.names.append(local.name);
 			}

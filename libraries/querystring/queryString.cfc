@@ -285,7 +285,7 @@ component accessors="true" output="true"
 		return this;
 	}
 	
-	public function setValue(required string variable,required value,append,displayValue)
+	public function setValue(required string variable,required value,append,displayValue="")
 	{
 		/* setValue will server two purposes:
 			1. Check if an element exists, and if it does, update it (unless we force an append)
