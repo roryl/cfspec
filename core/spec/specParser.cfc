@@ -215,11 +215,13 @@ component accessors="true" {
 		//Get the file path by first removing the last element
 		writeLog(file="cfspec",text="End _parseSpec");
 		fileWrite(arguments.compilePath,local.output);
+		writeLog(file="cfspec",text="End _parseSpec fileWrite");
 		return spec;
 	}
 
 	private function buildBeforeTests(required struct spec)
 	{
+		writeLog(file="cfspec",text="Start buildBeforeTests");
 		local.spec = arguments.spec
 		o('public function beforeTests(){')
 			tab(2);
@@ -238,11 +240,13 @@ component accessors="true" {
 
 			tab(0);tab(1);
 			o('}')
-			nl()
+			nl();
+			writeLog(file="cfspec",text="End buildBeforeTests");
 	}
 
 	private string function buildHTTPSpec(required struct spec)
 	{
+		writeLog(file="cfspec",text="Start buildHTTPSpec");
 		local.spec = arguments.spec;
 		savecontent variable="local.output"{
 			tab(0);
@@ -362,7 +366,7 @@ component accessors="true" {
 			nl();
 			echo('}');//Ending component Tag
 		}
-
+		writeLog(file="cfspec",text="End buildHTTPSpec");
 		return local.output;
 	}
 
@@ -383,6 +387,7 @@ component accessors="true" {
 
 	private string function buildClassSpec(required struct spec)
 	{
+		writeLog(file="cfspec",text="Start buildClassSpec");
 		local.spec = arguments.spec;
 		savecontent variable="local.output"{
 
@@ -393,11 +398,16 @@ component accessors="true" {
 				buildBeforeTests(local.spec);
 
 				if(structKeyExists(spec,"class"))
-				{
-					var metaData = getComponentMetaData(spec.class);					
+				{	
+					try {
+						var metaData = getComponentMetaData(spec.class);					
+					} catch(any e) {
+						var tryComponentPath = replace(variables.specFilePath,".spec","");
+						var metaData = getComponentMetaData(local.tryComponentPath);
+					}
 					//If the spec describes a persistent entity, then we can automatically build out tests to test the 
 					//entity methods
-					if(structKeyExists(metaData,"persistent") and metaData.persistent IS true)
+					if(structKeyExists(local.metaData,"persistent") and local.metaData.persistent IS true)
 					{
 						buildEntityTests(local.spec);					
 					}
@@ -406,7 +416,7 @@ component accessors="true" {
 				for(var name in spec.tests)//For each of the tested functions defined in the specification
 				{
 					//These keywords are not actually tests and so they can be skipped
-					if(name IS "setup" OR name IS "before" OR name IS "after" OR name IS "factory"){
+					if(local.name IS "setup" OR local.name IS "before" OR local.name IS "after" OR local.name IS "factory"){
 						continue;	
 					}
 					
