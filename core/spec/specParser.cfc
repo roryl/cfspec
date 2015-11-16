@@ -286,16 +286,19 @@ component accessors="true" {
 					for(local.method IN spec.tests[local.uri])
 					{
 						//These keywords are not actually methods and so they can be skipped
-						if(local.method IS "setup" OR local.method IS "before" OR local.method IS "after" OR local.method IS "factory"){
+						if(local.method IS "setup" OR local.method IS "before" OR local.method IS "after" OR local.method IS "factory" OR local.method IS "assert"){
 							continue;	
 						}
 
 						for(local.scenario IN spec.tests[local.uri][local.method])
 						{	
 							//These keywords are not actually scenarios and so they can be skipped
-							if(local.scenario IS "setup" OR local.scenario IS "before" OR local.scenario IS "after" OR local.scenario IS "factory"){
+							if(local.scenario IS "setup" OR local.scenario IS "before" OR local.scenario IS "after" OR local.scenario IS "factory" OR local.method IS "assert"){
 								continue;	
 							}
+
+							local.clean = cleanURI(local.uri & "_" & local.scenario);
+							o('public function #local.method#_#local.clean#(){');
 
 							//Setup at the all tests level
 							if(structKeyExists(spec.tests,"setup"))
@@ -310,7 +313,7 @@ component accessors="true" {
 							if(structKeyExists(spec.tests[local.uri],"setup"))
 							{
 								o('//Get the setup function for the test')
-								o('var uriTestSetup = variables.spec.tests.#name#.setup')
+								o('var uriTestSetup = variables.spec.tests["#local.uri#"].setup')
 								o('//Call the setup function for the test')
 								o('uriTestSetup()')							
 							}
@@ -319,7 +322,7 @@ component accessors="true" {
 							if(structKeyExists(spec.tests[local.uri][local.method],"setup"))
 							{
 								o('//Get the setup function for the test')
-								o('var methodTestSetup = variables.spec.tests.#name#["#local.scenario#"].setup')
+								o('var methodTestSetup = variables.spec.tests["#local.uri#"]["#local.method#"].setup')
 								o('//Call the setup function for the test');
 								
 								o('methodTestSetup()')
@@ -329,15 +332,15 @@ component accessors="true" {
 							if(structKeyExists(spec.tests[local.uri][local.method][local.scenario],"setup"))
 							{
 								o('//Get the setup function for the test')
-								o('var contextTestSetup = variables.spec.tests.#name#["#local.scenario#"].setup')
+								o('var contextTestSetup = variables.spec.tests["#local.uri#"]["#local.method#"]["#local.scenario#"].setup')
 								o('//Call the setup function for the test');
 								
 								o('contextTestSetup()')
 							}
 
-							local.clean = cleanURI(local.uri & "_" & local.scenario);
+							
 
-							o('public function #local.method#_#local.clean#(){');
+							
 								tab("+1");
 								o('test = new cfspec.core.spec.httpTester(specPath="#variables.specFilePath#", method="#local.method#", resource="#local.uri#", scenario="#local.scenario#")');
 								o('local.result = test.doHTTPCall();')
@@ -358,6 +361,7 @@ component accessors="true" {
 					}
 					catch(any e){
 						writeDump(local);
+						writeDump(e);
 						abort;
 					}
 				}

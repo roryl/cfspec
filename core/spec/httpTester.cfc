@@ -344,8 +344,7 @@ component accessors="true"{
 
 	}	
 
-	public function doAsserts(required specContext, required response){
-
+	public function doAsserts(required specContext, required response){		
 		//Setup a local function that will be called before. We split this out because the assert specification
 		//can either be a structure of message or just a general function
 		local.doAssert = function(assert, response){
@@ -368,8 +367,8 @@ component accessors="true"{
 				else {
 					local.args[1] = arguments.actualValue;
 				}				
-			}		
-
+			}	
+			
 			local.result = arguments.assert(argumentCollection=local.args);
 			if(NOT isDefined('local.result'))
 			{
@@ -391,7 +390,7 @@ component accessors="true"{
 				{
 					for(local.message IN arguments.specContext.then.assert)
 					{
-						local.doAssert(arguments.specContext.then.assert["#local.message#"]);
+						local.doAssert(arguments.specContext.then.assert["#local.message#"], arguments.response);
 					}
 				}
 				else
